@@ -5,7 +5,8 @@
 #include <vector>
 #include <string>
 #include <sstream>
-
+#include "instructions.hpp"
+#include "pc.hpp"
 using namespace std;
 
 int main(int argc, char* argv[]){
