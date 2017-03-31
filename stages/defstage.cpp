@@ -1,6 +1,6 @@
 // define functions(procedures for each stage
 
-include <>
+include <stagereg.hpp>
 
 IF()
 {
