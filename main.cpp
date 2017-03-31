@@ -20,7 +20,7 @@ int main(int argc, char* argv[]){
 	if(inFile.is_open){
 		cout << "File opened successfully" << endl;
 		while(getline(inFile, line)){
-			temp.hex = line;
+			temp.value = line;
 			instructions[i] = temp;
 			i++;
 			if(i > 999){

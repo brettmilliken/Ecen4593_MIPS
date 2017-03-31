@@ -2,7 +2,7 @@
 #define INSTRUCTION_INCLUDED
 
 struct instruction{
-	int hex;
+	int value;
 } instruction;
 
 extern instruction instructions[1000];
