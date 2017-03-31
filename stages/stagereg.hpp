@@ -1,5 +1,5 @@
-#ifndef STAGEREG_H
-#define STAGEREG_H
+#ifndef STAGEREG_HPP
+#define STAGEREG_HPP
 
 // This file defines the state registers
 
