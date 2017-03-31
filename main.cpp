@@ -13,7 +13,7 @@ int main(int argc, char* argv[]){
 	//grab all instructions from input file and place them in the instructions array
 	//simulating instruction memory
 	ifstream inFile;
-	instruction temp;
+	instr temp;
 	int i = 0
 	
 	inFile.open(argv[0])

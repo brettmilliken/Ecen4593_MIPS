@@ -1,10 +1,10 @@
-#ifndef INSTRUCTION_INCLUDED	
-#define INSTRUCTION_INCLUDED
+#ifndef INSTRUCTIONS_HPP	
+#define INSTRUCTIONS_HPP
 
-struct instruction{
+struct instr{
 	int value;
-} instruction;
+} instr;
 
-extern instruction instructions[1000];
+extern instr instructions[1000];
 
 #endif
