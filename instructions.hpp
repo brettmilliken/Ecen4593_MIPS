@@ -3,8 +3,8 @@
 
 struct instr{
 	int value;
-} instr;
+};
 
-extern instr instructions[1000];
+extern struct instr instructions[1000];
 
 #endif

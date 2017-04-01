@@ -5,35 +5,73 @@
 
 struct IF_ID
 {  
-	int PCincremented = pc.address + 4; // store incremented pc value
-	int instruction = mem[pc.address]; // store instruction from pc address location
+
+	//shadow(temp) register
+	int shadPCincremented; // store incremented pc value
+	int shadinstruction; // store instruction from instruction memory
+	
+	// actual stage register
+	int PCincremented; // store incremented pc value
+	int instruction; // store instruction from instruction memory
 };
+
+extern struct IF_ID ifid;
 
 struct ID_EX
 {
 	//store instruction information
-	int opcode = (IF_ID.instruction & 0xFC000000) >> 26; // store opcode
-	int rs = (IF_ID.instruction & 0x03E00000) >> 21; // store rs (first source reg #)
-	int rt = (IF_ID.instruction & 0x001F0000) >> 16; // store rt (second source reg #)
-	int rd = (IF_ID.instruction & 0x0000F800) >> 11; // store rd (destination reg #)
-	int shamt = (IF_ID.instruction & 0x
-	int funct;
-	int immediate;
-	int target;
-	int PCincremented;
+
+	//shadow(temp) register
+	int shadopcode; // store opcode
+	int shadrs; // store rs (first source reg #)
+	int shadrt; // store rt (second source reg #)
+	int shadrd; // store rd (destination reg #)
+	int shadshamt; // store shift amount
+	int shadfunct; // store funct
+	int shadimmediate; // store immediate
+	int shadtarget; // store branch target
+	int shadPCincremented; // store incremented program counter
+
+	// actual stage register
+	int opcode; // store opcode
+	int rs; // store rs (first source reg #)
+	int rt; // store rt (second source reg #)
+	int rd; // store rd (destination reg #)
+	int shamt; // store shift amount
+	int funct; // store funct
+	int immediate; // store immediate
+	int target; // store branch target
+	int PCincremented; // store incremented program counter
 };
+
+extern struct ID_EX idex;
 
 struct EX_MEM
 {
-	int ALUresult;
-	int rd;
-	int PCchanged;
+	//shadow(temp) register
+	int shadALUresult; // store alu result
+	int shadrd; // store destination reg #
+	int shadPCchanged; // store new program counter value
+		
+	// actual stage register
+	int ALUresult; // store alu result
+	int rd; // store destination reg #
+	int PCchanged; // store new program counter value
 };
+
+extern struct EX_MEM exmem;
 
 struct MEM_WB
 {
-	int ALUresult;
-	int data;
+	//shadow(temp) register
+	int shadALUresult; // store alu result
+	int shaddata; // store data
+
+	// actual stage register
+	int ALUresult; // store alu result
+	int data; // store data
 };
+
+extern struct MEM_WB memwb;
 
 #endif
