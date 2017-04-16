@@ -16,7 +16,7 @@ IF_ID ifid; // if/id stage register
 ID_EX idex; // id/ex stage register
 EX_MEM exmem; // ex/mem stage register
 MEM_WB memwb; // mem/wb stage register
-
+registers[33];
 // end define global variables
 
 int main(int argc, char* argv[]){

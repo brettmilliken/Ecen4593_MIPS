@@ -49,11 +49,14 @@ extern struct ID_EX idex;
 struct EX_MEM
 {
 	//shadow(temp) register
+	int shadBranchTarget; // store branch target address
 	int shadALUresult; // store alu result
 	int shadrd; // store destination reg #
 	int shadPCchanged; // store new program counter value
 		
+		
 	// actual stage register
+	int BranchTarget // store branch target address
 	int ALUresult; // store alu result
 	int rd; // store destination reg #
 	int PCchanged; // store new program counter value
