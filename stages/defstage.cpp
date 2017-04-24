@@ -69,14 +69,16 @@ void IF()
 	shadifid.instruction = instructions[PC.address]; // store current instruction
 	PC.address = PC.address + 1; // increment pc value and store
 	shadifid.PCincremented = PC.address;
+	shadifid.rs = (shadifid.instruction & 0x03E00000) >> 21; // store rs (first source reg #)
+	shadifid.rt = (shadifid.instruction & 0x001F0000) >> 16; // store rt (second source reg #)
 }
 
 void ID()
 {
 	shadidex.opcode = (ifid.instruction & 0xFC000000) >> 26; // mask off opcode and shift
 	setcontrol();
-	shadidex.rs = (ifid.instruction & 0x03E00000) >> 21; // store rs (first source reg #)
-	shadidex.rt = (ifid.instruction & 0x001F0000) >> 16; // store rt (second source reg #)
+	shadidex.rs = ifid.rs // store rs (first source reg #)
+	shadidex.rt = ifid.rt // store rt (second source reg #)
 	shadidex.rd = (ifid.instruction & 0x0000F800) >> 11; // store rd (destination reg #)
 	shadidex.rsVal = gregisters[shadidex.rs];
 	shadidex.rtVal = gregisters[shadidex.rt];
@@ -91,6 +93,11 @@ void ID()
 	{
 		stall(true);
 	}
+	if(idex.memRead && ((exmem.WBreg == ifid.rs) || (exmem.WBreg == ifid.rt)))
+	{
+		stall(true);
+	}
+	if(idex.regWrite && !(idex.memRead) // what we checkin for? 
 	switch(shadidex.opcode)	{
 		case 0x4: // BEQ
 			if(idex.rsVal == idex.rtVal) {
@@ -135,20 +142,14 @@ void ID()
 
 void EX()
 {
-	
-	shadexmem.WBreg = idex.WBreg;
-	shadexmem.branch = idex.branch;
-	shadexmem.memRead = idex.memRead;
-	shadexmem.memWrite = idex.memWrite;
-	shadexmem.opcode = idex.opcode;
-	shadexmem.regWrite = idex.regWrite;
-	shadexmem.regDst = idex.regDst;
-	shadexmem.memToReg = idex.memToReg;
-	shadexmem.funct = idex.funct;
-	shadexmem.rd = idex.rd;
-	shadexmem.rsVal = idex.rsVal;
-	shadexmem.rtVal = idex.rtVal;
-	shadexmem.PCchanged = idex.PCincremented + 1;
+	if(idex.regDst)
+	{
+		shadexmem.WBreg = idex.rd;
+	}
+	else
+	{
+		shadexmem.WBreg = idex.rt;
+	}
 	// for R-type
 	
 	// rs is first source register for load instructions
@@ -157,20 +158,20 @@ void EX()
 	// for load 
 	
 
-	if(exmem.regWrite && exmem.rd != 0 && exmem.rd == idex.rs) {  // Forwarding and hazards
+	if(exmem.regWrite && exmem.WBreg != 0 && exmem.WBreg == idex.rs) {  // Forwarding and hazards
 		idex.rs = exmem.WBreg;
 		idex.rsVal = exmem.ALUresult;
 	}
-	if(exmem.regWrite && exmem.rd != 0 && exmem.rd == idex.rt) {
+	if(exmem.regWrite && exmem.WBreg != 0 && exmem.WBreg == idex.rt) {
 		idex.rt = exmem.WBreg;
 		idex.rtVal = exmem.ALUresult;
 	}
-	if(memwb.regWrite && memwb.rd != 0 && memwb.rd == idex.rs && !(exmem.regWrite && exmem.rd != 0 && exmem.rd == idex.rs)) {
-		idex.rs = memwb.rd;
+	if(memwb.regWrite && memwb.WBreg != 0 && memwb.WBreg == idex.rs && !(exmem.regWrite && exmem.WBreg != 0 && exmem.WBreg == idex.rs)) {
+		idex.rs = memwb.WBreg;
 		idex.rsVal = memwb.data;
 	}
-	if(memwb.regWrite && memwb.rd != 0 && memwb.rd == idex.rt && !(exmem.regWrite && exmem.rd != 0 && exmem.rd == idex.rt)) {
-		idex.rt = memwb.rd;
+	if(memwb.regWrite && memwb.WBreg != 0 && memwb.WBreg == idex.rt && !(exmem.regWrite && exmem.WBreg != 0 && exmem.WBreg == idex.rt)) {
+		idex.rt = memwb.WBreg;
 		idex.rtVal = memwb.data;
 	}
 	// for load-use:
@@ -178,21 +179,28 @@ void EX()
 	{
 		stall(false);
 	}
-	switch(shadexmem.opcode) {
+	shadexmem.branch = idex.branch;
+	shadexmem.memRead = idex.memRead;
+	shadexmem.memWrite = idex.memWrite;
+	shadexmem.regWrite = idex.regWrite;
+	shadexmem.regDst = idex.regDst;
+	shadexmem.memToReg = idex.memToReg;
+	shadexmem.PCincremented = idex.PCincremented + 1;
+	switch(idex.opcode) {
 		case 0x00:
-            switch(shadexmem.funct) { // switch statement for r-type
+            switch(idex.funct) { // switch statement for r-type
 				case 0x20: // ADD
-					shadexmem.ALUresult = shadexmem.rsVal + shadexmem.rtVal;
+					shadexmem.ALUresult = idex.rsVal + idex.rtVal;
 					// add trap call if there is overflow
 					// add overflow detection
 					break;
 
 				case 0x21: // ADDU
-					shadexmem.ALUresult = shadexmem.rsVal + shadexmem.rtVal;
+					shadexmem.ALUresult = idex.rsVal + idex.rtVal;
 					break;
 					
 				case 0x24: // AND
-					shadexmem.ALUresult = shadexmem.rsVal & shadexmem.rtVal;
+					shadexmem.ALUresult = idex.rsVal & idex.rtVal;
 					break;
 
 				case 0x8: // JR
@@ -200,50 +208,50 @@ void EX()
 					break;
 
 				case 0x27: // NOR
-					shadexmem.ALUresult = ~(shadexmem.rsVal | shadexmem.rtVal);
+					shadexmem.ALUresult = ~(idex.rsVal | idex.rtVal);
 					break;
 
 				case 0x25: // OR
-					shadexmem.ALUresult = shadexmem.rsVal | shadexmem.rtVal;
+					shadexmem.ALUresult = idex.rsVal | idex.rtVal;
 					break;
 
 				case 0x2A: // SLT
-					if(shadexmem.rsVal < shadexmem.rtVal){
+					if(idex.rsVal < idex.rtVal){
 						shadexmem.ALUresult = 1;
 					}
 					break;
 
 				case 0x2B: // SLTU
-					if(uint8(shadexmem.rsVal) < shadexmem.rtVal){
+					if(uint8(idex.rsVal) < idex.rtVal){
 						shadexmem.ALUresult = 1;
 					}
 					break;
 
 				case 0x0: // SLL
-					shadexmem.ALUresult = shadexmem.rtVal << shadexmem.shamt;
+					shadexmem.ALUresult = idex.rtVal << shadexmem.shamt;
 					break;
 
 				case 0x2: // SRL
-					shadexmem.ALUresult = shadexmem.rtVal >> shadexmem.shamt;
+					shadexmem.ALUresult = idex.rtVal >> shadexmem.shamt;
 					break;
 
 				case 0x22: // SUB // implement trap on overflow
-					shadexmem.ALUresult = shadexmem.rsVal - shadexmem.rtVal;
+					shadexmem.ALUresult = idex.rsVal - idex.rtVal;
 					break;
 
 				case 0x23: // SUBU
-					shadexmem.ALUresult = shadexmem.rsVal - shadexmem.rtVal;
+					shadexmem.ALUresult = idex.rsVal - idex.rtVal;
 					break;
 
 				case 0xB: // MOVN
 					if(idex.rtVal != 0){
-						shadexmem.ALUresult = shadexmem.rsVal;
+						shadexmem.ALUresult = idex.rsVal;
 					}
 					break;
 
 				case 0xA: // MOVZ
 					if (idex.rtVal == 0){
-						shadexmem.ALUresult = shadexmem.rsVal;
+						shadexmem.ALUresult = idex.rsVal;
 					}
 					break;
 
@@ -251,59 +259,54 @@ void EX()
             break;
 
 		case 0x26: // XOR
-			shadexmem.ALUresult = shadexmem.rsVal ^ shadexmem.rtVal;
+			shadexmem.ALUresult = idex.rsVal ^ idex.rtVal;
 			break;
 
 		case 0x8: // ADDI // implement trap on overflow
-			shadexmem.ALUresult = shadexmem.rsVal + shadexmem.immediate;
-			shadexmem.rd = shadexmem.rt;
+			shadexmem.ALUresult = idex.rsVal + idex.immediate;
 			break;
 
 		case 0x9: // ADDIU
-			shadexmem.ALUresult = shadexmem.rsVal + shadexmem.immediate;
-			shadexmem.rd = shadexmem.rt;
+			shadexmem.ALUresult = idex.rsVal + idex.immediate;
 			break;
 
 		case 0xC: // ANDI
-			shadexmem.ALUresult = shadexmem.rsVal & (0x0000FFFF & shadexmem.immediate);
-			shadexmem.rd = shadexmem.rt;
+			shadexmem.ALUresult = idex.rsVal & (0x0000FFFF & idex.immediate);
 			break;
 
 		case 0xE: // XORI
-			shadexmem.ALUresult = shadexmem.rsVal ^ (0x0000FFFF & shadexmem.immediate);
-			shadexmem.rd = shadexmem.rt;
+			shadexmem.ALUresult = idex.rsVal ^ (0x0000FFFF & idex.immediate);
 			break;
 
         case 0x20: // LB
-            
+            shadexmem.ALUresult = idex.rs + signExtend(idex.immediate);
             break;
 
         case 0x24: // LBU
             // to be done
+            shadexmem.ALUresult = idex.rs + signExtend(idex.immediate);
             break;
 
         case 0x25: // LHU
             // to be done
+			shadexmem.ALUresult = idex.rs + signExtend(idex.immediate);
             break;
 
         case 0xF: // LUI
-            shadexmem.rd = shadexmem.rt;
-            shadexmem.ALUresult = shadexmem.immediate << 16;
+            shadexmem.ALUresult = idex.immediate << 16;
             break;
 
         case 0x23: // LW
-            shadexmem.rd = shadexmem.rt;
-            shadexmem.ALUresult = signExtend(shadexmem.immediate) + shadexmem.rsVal;
+            shadexmem.ALUresult = signExtend(idex.immediate) + idex.rsVal;
             break;
 
         case 0xD: // ORI
-            shadexmem.rd = shadexmem.rt;
-            shadexmem.ALUresult = shadexmem.rsVal | (uint32_t(shadexmem.immediate)) >> 16;
+            shadexmem.ALUresult = idex.rsVal | (uint32_t(idex.immediate)) >> 16;
             break;
 
         case 0xA: // SLTI
             shadexmem.rd = shadexmem.rt;
-            if(shadexmem.rsVal < shadexmem.immediate){
+            if(idex.rsVal < idex.immediate){
                 shadexmem.ALUresult = 1;
             }
             else
@@ -328,6 +331,7 @@ void EX()
 
         case 0x2B: // SW
             // store word to be done
+            shadexmem.rd = 
             break;
 
         case 0x1F: // SEB
@@ -338,8 +342,18 @@ void EX()
 
 void MEM()
 {	
-	memwb.dest = exmem.rd;
-	memwb.ALUresult = exmem.ALUresult;
+	shadmemwb.WBreg = exmem.WBreg;
+	shadmemwb.regWrite = exmem.regWrite;
+	shadmemwb.memToReg = exmem.memToReg;
+	shadmemwb.data = exmem.ALUresult;
+	if(exmem.memWrite)
+	{
+		memory[exmem.ALUresult] = exmem.rtVal;
+	}
+	if(exmem.memRead)
+	{
+		exmem.dataOut = memory[exmem.ALUresult];
+	}
 		if(shadidex.opcode == 0x20 || shadidex.opcode == 0x24 || shadidex.opcode == 0x25 ||
 	shadidex.opcode == 0x0F || shadidex.opcode == 0x23 )//load
 	if(shadidex.opcode == 0x28 || shadidex.opcode == 0x29 || shadidex.opcode == 0x2B )//store 	

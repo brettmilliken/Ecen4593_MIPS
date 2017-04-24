@@ -38,7 +38,6 @@ struct ID_EX
 	bool memRead;
 	bool memWrite;
 	bool branch;
-	int WBreg;
 };
 
 extern struct ID_EX idex;
@@ -46,13 +45,10 @@ extern struct ID_EX shadidex;
 
 struct EX_MEM
 {
-	int funct;
 	int WBreg;
-	int opcode;
-	int rsVal;
-	int rtVal;
+	int dataOut;
 	int ALUresult; // store alu result
-	int PCchanged; // store new program counter value
+	int PCincremented; // store new program counter value
 	bool memToReg;
 	bool regWrite;
 	bool memRead;
@@ -67,7 +63,7 @@ struct MEM_WB
 {	
 	int data; // store data
 	int WBreg; // store destination register
-	int PC;
+	int PCincremented;
 	bool memToReg;
 	bool regWrite;
 };
