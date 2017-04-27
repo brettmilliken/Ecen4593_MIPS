@@ -11,6 +11,7 @@ struct IF_ID
 	int instruction; // store instruction from instruction memory
 	int rs;
 	int rt;
+	int rd;
 };
 
 extern struct IF_ID ifid;
@@ -19,6 +20,7 @@ extern struct IF_ID shadifid;
 struct ID_EX
 {
 	//store instruction information
+	int WBreg;
 	int opcode; // store opcode
 	int rs; // store rs (first source reg #)
 	int rsVal;
@@ -32,7 +34,7 @@ struct ID_EX
 	int jtarget; // store jump target
 	int PCincremented; // store incremented program counter
 	bool regDst;
-	bool ALUSrc;
+	//bool ALUSrc; // never referenced
 	bool memToReg;
 	bool regWrite;
 	bool memRead;
@@ -45,6 +47,8 @@ extern struct ID_EX shadidex;
 
 struct EX_MEM
 {
+	int opcode;
+	int rtVal;
 	int WBreg;
 	int dataOut;
 	int ALUresult; // store alu result
@@ -62,6 +66,7 @@ extern struct EX_MEM shadexmem;
 struct MEM_WB
 {	
 	int data; // store data
+	int dataOut;
 	int WBreg; // store destination register
 	int PCincremented;
 	bool memToReg;
