@@ -3,7 +3,7 @@
 
 struct pc {
 	int address;
-} pc;
+};
 
 extern pc PC;
 
