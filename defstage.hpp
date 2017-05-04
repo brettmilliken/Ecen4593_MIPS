@@ -2,7 +2,7 @@
 #define DEFSTAGE_HPP
 
 extern int gregisters[];
-extern unsigned int memory[];
+extern int memory[];
 
 
 //extern struct IF_ID ifid;

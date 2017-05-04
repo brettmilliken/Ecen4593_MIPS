@@ -1,6 +1,6 @@
 CSIGN = -std=c++11
 CC = g++
-CFLAGS = -Wall -Wextra
+CFLAGS = -Wall -Wextra -g
 RM = rm 
 all: mips 
 

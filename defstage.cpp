@@ -12,10 +12,13 @@
 
 bool stallPipe;
 int pcNext;
-int graboffset;
 int temp;
+int memes;
+int masktemp;
+bool forward;
 extern struct pc PC;
-extern unsigned int memory[];
+extern int memory[];
+int32_t signTemp;
 IF_ID ifid;
 IF_ID shadifid;
 ID_EX idex;
@@ -27,9 +30,9 @@ MEM_WB shadmemwb;
 
 void stall()
 {
-	ifid.rs = 0; // store rs (first source reg #)
-	ifid.rt = 0; // store rt (second source reg #)
-	ifid.instruction = 0x00000000;
+	//ifid.rs = 0; // store rs (first source reg #)
+	//ifid.rt = 0; // store rt (second source reg #)
+	//ifid.instruction = 0x00000000;
 	shadidex.regDst = false;
 	//shadidex.ALUSrc = false;
 	shadidex.memToReg = false;
@@ -86,7 +89,9 @@ void setcontrol()
 		shadidex.memWrite = false;
 		shadidex.branch = true;
 	}
-	else // immediate instructions
+	if((shadidex.opcode == 0x8)||(shadidex.opcode == 0x9)||(shadidex.opcode == 0xC)
+		||(shadidex.opcode == 0xE)||(shadidex.opcode == 0xA)||(shadidex.opcode == 0xB)
+		||(shadidex.opcode == 0xD)) // immediate instructions
 	{
 		shadidex.regDst = false;
 		//shadidex.ALUSrc = false;
@@ -97,14 +102,15 @@ void setcontrol()
 		shadidex.branch = false;
 	}
 }
-/*
-int signExtend(offset)
+
+int32_t signExtend(int offset)
 {
 	if(offset & 0x00008000){
-		return offset += 0xFFFF0000;
+		return (offset | 0xFFFF0000);
 	}
+	else {return (offset & 0x0000FFFF);}
 }
-*/
+
 /* *****************************************************************************
 8888888888 8888888888 88888888888 .d8888b.  888    888 
 888        888            888    d88P  Y88b 888    888 
@@ -122,11 +128,14 @@ void IF()
 	shadifid.instruction = memory[PC.address]; // store current instruction
 	// increment pc value and store
 	shadifid.PCincremented = PC.address + 1;
-	std::cout << "inst: " << shadifid.instruction << "\n";
+	pcNext = shadifid.PCincremented;
+	//std::cout << "inc PC: " << shadifid.PCincremented << "\n"; 
+	//std::cout << "inst: " << std::hex << shadifid.instruction << "\n";
 	shadifid.rs = (shadifid.instruction & 0x03E00000) >> 21; // store rs (first source reg #)
 	shadifid.rt = (shadifid.instruction & 0x001F0000) >> 16; // store rt (second source reg #)
 	shadifid.rd = (shadifid.instruction & 0x0000F800) >> 11; // store rd (destination reg #)
-
+	shadifid.immediate = (shadifid.instruction & 0x0000FFFF);
+	//std::cout << "rd: " << shadifid.rd << "\n";
 }
 
 /* *****************************************************************************
@@ -142,18 +151,19 @@ void IF()
 
 void ID()
 {
-	pcNext = ifid.PCincremented;
+	//std::cout << "pcNextDecode: " << std::dec << pcNext << "\n";
 	shadidex.opcode = (ifid.instruction & 0xFC000000) >> 26; // mask off opcode and shift
-	shadidex.rs = (ifid.instruction & 0x03E00000) >> 21; // store rs (first source reg #)
-	shadidex.rt = (ifid.instruction & 0x001F0000) >> 16; // store rt (second source reg #)
-	shadidex.rd = (ifid.instruction & 0x0000F800) >> 11; // store rd (destination reg #)
+	shadidex.rs = ifid.rs; // store rs (first source reg #)
+	shadidex.rt = ifid.rt; // store rt (second source reg #)
+	shadidex.rd = ifid.rd; // store rd (destination reg #)
 	shadidex.rsVal = gregisters[shadidex.rs];
 	shadidex.rtVal = gregisters[shadidex.rt];
 	shadidex.shamt = (ifid.instruction & 0x000007C0) >> 6;
 	shadidex.funct = (ifid.instruction & 0x0000003F);
-	shadidex.immediate = (ifid.instruction & 0x0000FFFF);
-	shadidex.target = (ifid.instruction & 0x03FFFFFF) ; // mask jump index
-	std::cout<< "OP: " << shadidex.opcode << " FUNCT: " << shadidex.funct <<"\n";
+	shadidex.signedimmediate = ifid.immediate;
+	//shadidex.immediate = (int16_t)shadidex.immediateunsigned;
+	shadidex.target = (ifid.instruction & 0x03FFFFFF); // mask jump index
+	//std::cout << std::hex << "OP: " << shadidex.opcode << " FUNCT: " << shadidex.funct <<"\n";
 	setcontrol();
 	
 	if(shadidex.regDst)
@@ -167,35 +177,24 @@ void ID()
 	
 	// branch forwarding
 	// execution hazard
-	if((exmem.regWrite) && (exmem.WBreg != 0) && (shadidex.rs == exmem.WBreg)) {  // Forwarding and hazards
-		shadidex.rs = exmem.WBreg;
+	if(shadidex.branch && (exmem.regWrite) && !(exmem.memRead) && (exmem.WBreg != 0) && (ifid.rs == exmem.WBreg)) {  // Forwarding and hazards
 		shadidex.rsVal = exmem.ALUresult;
+		forward = true;
 	}
-	if((exmem.regWrite) && (exmem.WBreg != 0) && (shadidex.rt == exmem.WBreg)) {
-		shadidex.rt = exmem.WBreg;
+	if(shadidex.branch && (exmem.regWrite) && !(exmem.memRead) && (exmem.WBreg != 0) && (ifid.rt == exmem.WBreg)) {
 		shadidex.rtVal = exmem.ALUresult;
+		forward = true;
 	}
-	// memory hazard
-	if((memwb.regWrite) && (memwb.WBreg != 0) && (shadidex.rs == memwb.WBreg) 
-		&& !((exmem.regWrite) && (exmem.WBreg != 0) && (shadidex.rs == exmem.WBreg))) {
-		shadidex.rs = memwb.WBreg;
-		shadidex.rsVal = memwb.data;
-	}
-	if((memwb.regWrite) && (memwb.WBreg != 0) && (shadidex.rt == memwb.WBreg) 
-		&& !((exmem.regWrite) && (exmem.WBreg != 0) && (shadidex.rt == exmem.WBreg))) {
-		shadidex.rt = memwb.WBreg;
-		shadidex.rtVal = memwb.data;
-	}
-	
+
 	// branch control hazards
 	
-	if((idex.regWrite) && !(idex.memRead) && !(idex.memWrite) && (idex.WBreg != 0) 
-		&& ((idex.WBreg == shadidex.rt) || (idex.WBreg == shadidex.rs)))
+	if(shadidex.branch && (idex.regWrite) && (idex.WBreg != 0) 
+		&& ((idex.WBreg == ifid.rt) || (idex.WBreg == ifid.rs)))
 	{
 		stall();
 	}
-	if((exmem.regWrite) && (exmem.memRead) && (exmem.WBreg != 0) 
-		&& ((exmem.WBreg == shadidex.rt) || (exmem.WBreg == shadidex.rs)))
+	else if(shadidex.branch && !(forward) && (exmem.regWrite) && (exmem.memRead) && (exmem.WBreg != 0) 
+		&& ((exmem.WBreg == ifid.rt) || (exmem.WBreg == ifid.rs)))
 	{
 		stall();
 	}
@@ -210,51 +209,53 @@ void ID()
 	{
 		switch(shadidex.opcode)	{
 			case 0x4: // BEQ
-				if(shadidex.rsVal == shadidex.rtVal) {
-					pcNext = ifid.PCincremented + int(shadidex.immediate);
+				if(int(shadidex.rsVal) == int(shadidex.rtVal)) {
+					pcNext = ifid.PCincremented + shadidex.signedimmediate;
 				}
 				break;
 
 			case 0x5: // BNE
-				if(shadidex.rsVal != shadidex.rtVal) {
-					pcNext = ifid.PCincremented + int(shadidex.immediate);
+				if(int(shadidex.rsVal) != int(shadidex.rtVal)) {
+					pcNext = ifid.PCincremented + shadidex.signedimmediate;
 				}
 				break;
 
 			case 0x7: // BGTZ
-				if(shadidex.rsVal > 0){
-					pcNext = ifid.PCincremented + int(shadidex.immediate);
+				if(int(shadidex.rsVal) > 0){
+					pcNext = ifid.PCincremented + shadidex.signedimmediate;
 				}
 				break;
 
 			case 0x1: // BLTZ
-				if(shadidex.rsVal < 0){
-					pcNext = ifid.PCincremented + int(shadidex.immediate);
+				if(int(shadidex.rsVal) < 0){
+					pcNext = ifid.PCincremented + shadidex.signedimmediate;
 				}
 				break;
 
 			case 0x6: // BLEZ
-				if(shadidex.rsVal <= 0){
-					pcNext = ifid.PCincremented + int(shadidex.immediate);
+				if(int(shadidex.rsVal) <= 0){
+					pcNext = ifid.PCincremented + shadidex.signedimmediate;
 				}
 				break;
 
 			case 0x2: // J
-				pcNext = (0x3C0000000 & ifid.PCincremented) | (shadidex.target);
+				pcNext = ((0xF0000000 & (ifid.PCincremented << 2)) | (shadidex.target << 2)) >> 2;
 				break;
 
 			case 0x3: // JAL
 				gregisters[31] = (ifid.PCincremented + 1) << 2; // set return address
-				pcNext = (0x3C0000000 & ifid.PCincremented) | (shadidex.target);
+				pcNext = ((0xF0000000 & (ifid.PCincremented << 2)) | (shadidex.target << 2)) >> 2;
 				break;
 			
 			case 0x0: // JR
 				if(shadidex.funct == 0x8) { // make sure JR
-					pcNext = gregisters[31] >> 2;
+					pcNext = shadidex.rsVal >> 2;
 				}
 				break;	
+			//std::cout << std::hex << "branch(taken) address: " << pcNext << "\n";
 		}
 	}
+	forward = false;
 }
 /* *****************************************************************************
 8888888888 Y88b   d88P 8888888888 .d8888b.  888     888 88888888888 8888888888 
@@ -275,33 +276,48 @@ void EX()
 	// rs is first source register for load instructions
 	// rt is second source register
 	
-	// for load 
-	
+	shadexmem.WBreg = idex.WBreg; 
 	shadexmem.opcode = idex.opcode; // set for load and store instructions.
-	shadexmem.rtVal = idex.rtVal;
 	
 	// execution hazard
 	if((exmem.regWrite) && (exmem.WBreg != 0) && (idex.rs == exmem.WBreg)) {  // Forwarding and hazards
-		idex.rs = exmem.WBreg;
-		idex.rsVal = exmem.ALUresult;
+		//idex.rsVal = exmem.ALUresult;
+		gregisters[idex.rs] = exmem.ALUresult;
 	}
 	if((exmem.regWrite) && (exmem.WBreg != 0) && (idex.rt == exmem.WBreg)) {
-		idex.rt = exmem.WBreg;
-		idex.rtVal = exmem.ALUresult;
+		//idex.rtVal = exmem.ALUresult;
+		gregisters[idex.rt] = exmem.ALUresult;
 	}
 	// memory hazard
 	if((memwb.regWrite) && (memwb.WBreg != 0) && (idex.rs == memwb.WBreg) 
 		&& !((exmem.regWrite) && (exmem.WBreg != 0) && (idex.rs == exmem.WBreg))) {
-		idex.rs = memwb.WBreg;
-		idex.rsVal = memwb.data;
+		if(memwb.memToReg){
+			gregisters[idex.rs] = memwb.dataOut;
+		}
+		else
+			gregisters[idex.rs] = memwb.data;
+
+		//idex.rsVal = memwb.data;
+		//std::cout <<"forwarded"<<"\n";
 	}
 	if((memwb.regWrite) && (memwb.WBreg != 0) && (idex.rt == memwb.WBreg) 
 		&& !((exmem.regWrite) && (exmem.WBreg != 0) && (idex.rt == exmem.WBreg))) {
-		idex.rt = memwb.WBreg;
-		idex.rtVal = memwb.data;
+		if(memwb.memToReg){
+			gregisters[idex.rt] = memwb.dataOut;
+		}
+		else
+			gregisters[idex.rt] = memwb.data;
+
+		//idex.rtVal = memwb.data;
 	}
 	
+		//idex.rtVal = memory[memwb.data];
+		//gregisters[idex.rt] = memory[memwb.data];
 	
+	shadexmem.rt = idex.rt;
+	idex.rsVal = gregisters[idex.rs];
+	idex.rtVal = gregisters[idex.rt];
+
 	shadexmem.branch = idex.branch;
 	shadexmem.memRead = idex.memRead;
 	shadexmem.memWrite = idex.memWrite;
@@ -333,15 +349,19 @@ void EX()
 					break;
 
 				case 0x2A: // SLT
-					if(idex.rsVal < idex.rtVal){
+					if(int32_t(idex.rsVal) < int32_t(idex.rtVal)){
 						shadexmem.ALUresult = 1;
 					}
+					else
+						shadexmem.ALUresult = 0;
 					break;
 
 				case 0x2B: // SLTU
 					if(uint32_t(idex.rsVal) < uint32_t(idex.rtVal)){
 						shadexmem.ALUresult = 1;
 					}
+					else
+						shadexmem.ALUresult = 0;
 					break;
 
 				case 0x0: // SLL
@@ -364,12 +384,16 @@ void EX()
 					if(idex.rtVal != 0){
 						shadexmem.ALUresult = idex.rsVal;
 					}
+					else
+						shadexmem.regWrite = false;
 					break;
 
 				case 0xA: // MOVZ
 					if (idex.rtVal == 0){
 						shadexmem.ALUresult = idex.rsVal;
 					}
+					else
+						shadexmem.regWrite = false;
 					break;
 					
 				case 0x26: // XOR
@@ -379,23 +403,23 @@ void EX()
             break;
 
 		case 0x8: // ADDI // implement trap on overflow (haha jk)
-			shadexmem.ALUresult = idex.rsVal + idex.immediate;
+			shadexmem.ALUresult = int(idex.rsVal) + idex.signedimmediate;
 			break;
 
 		case 0x9: // ADDIU
-			shadexmem.ALUresult = idex.rsVal + idex.immediate;
+			shadexmem.ALUresult = int(idex.rsVal) + idex.signedimmediate;
 			break;
 
 		case 0xC: // ANDI
-			shadexmem.ALUresult = idex.rsVal & (0x0000FFFF & idex.immediate);
+			shadexmem.ALUresult = idex.rsVal & (0x0000FFFF & uint(idex.signedimmediate));
 			break;
 
 		case 0xE: // XORI
-			shadexmem.ALUresult = idex.rsVal ^ (0x0000FFFF & idex.immediate);
+			shadexmem.ALUresult = idex.rsVal ^ (0x0000FFFF & uint(idex.signedimmediate));
 			break;
 
         case 0xA: // SLTI
-            if(idex.rsVal < idex.immediate){
+            if(int(idex.rsVal) < idex.signedimmediate){
                 shadexmem.ALUresult = 1;
             }
             else
@@ -403,7 +427,7 @@ void EX()
             break;
 
         case 0xB: // SLTIU
-            if(idex.rsVal < uint16_t(idex.immediate)){
+            if(idex.rsVal < uint16_t(idex.signedimmediate)){
                 shadexmem.ALUresult = 1;
             }
             else
@@ -411,48 +435,51 @@ void EX()
             break;
 
         case 0x20: // LB
-            shadexmem.ALUresult = idex.rs + int(idex.immediate >> 2);
-			graboffset = idex.immediate % 4;
+            shadexmem.ALUresult = idex.rsVal + idex.signedimmediate;
+			shadexmem.offset = idex.signedimmediate % 4;
             break;
 
         case 0x24: // LBU
-            shadexmem.ALUresult = idex.rs + int(idex.immediate >> 2);
-            graboffset = uint32_t(idex.immediate % 4);
+            shadexmem.ALUresult = idex.rsVal + idex.signedimmediate;
+            shadexmem.offset = (idex.signedimmediate % 4);
             break;
 
         case 0x25: // LHU
-			shadexmem.ALUresult = idex.rsVal + int(idex.immediate >> 2);
-			graboffset = idex.immediate % 4;
+			shadexmem.ALUresult = idex.rsVal + idex.signedimmediate;
+			shadexmem.offset = idex.signedimmediate % 4;
             break;
 
         case 0xF: // LUI
-            shadexmem.ALUresult = idex.immediate << 16;
+            shadexmem.ALUresult = idex.signedimmediate << 16;
             break;
 
         case 0x23: // LW
-            shadexmem.ALUresult = int(idex.immediate >> 2) + idex.rsVal;
+            shadexmem.ALUresult = idex.signedimmediate + idex.rsVal;
             break;
 
         case 0xD: // ORI
-            shadexmem.ALUresult = idex.rsVal | (uint32_t(idex.immediate)) >> 16;
+            shadexmem.ALUresult = idex.rsVal | (uint32_t(idex.signedimmediate));
             break;
 
         case 0x28: // SB
-			shadexmem.ALUresult = idex.rtVal + int(idex.immediate >> 2);
-			graboffset = idex.immediate % 4;
+			shadexmem.ALUresult = idex.rsVal + idex.signedimmediate;
+			shadexmem.offset = idex.signedimmediate % 4;
+			std::cout << shadexmem.offset << "\n";
+			memes = 1;
             break;
 
         case 0x29: // SH
-			shadexmem.ALUresult = idex.rtVal + int(idex.immediate >> 2);
-			graboffset = idex.immediate % 4;
+			shadexmem.ALUresult = idex.rsVal + idex.signedimmediate;
+			shadexmem.offset = idex.signedimmediate % 4;
             break;
 
         case 0x2B: // SW
-			shadexmem.ALUresult = idex.rtVal + int(idex.immediate >> 2);
+			shadexmem.ALUresult = idex.rsVal + idex.signedimmediate;
             break;
 
         case 0x1F: // SEB
-			shadexmem.ALUresult = int(idex.rtVal & 0xFF);
+			signTemp = signExtend(idex.rtVal & 0xFF);
+			shadexmem.ALUresult = signTemp;
             break;
 	}
 }
@@ -474,112 +501,118 @@ void MEM()
 	shadmemwb.regWrite = exmem.regWrite;
 	shadmemwb.memToReg = exmem.memToReg;
 	shadmemwb.data = exmem.ALUresult;
-	
+
 	if(exmem.memWrite)
 	{
 		switch(exmem.opcode) // where is this done physically?
 		{
 			case 0x28: // SB
-				temp = (0x000000FF & exmem.rtVal);
-				switch(graboffset)
+				temp = (0x000000FF & gregisters[exmem.rt]);
+				switch(exmem.offset)
 				{
 					case 0:
-						memory[exmem.ALUresult] = memory[exmem.ALUresult] & 0xFFFFFF00;
+						masktemp = memory[(exmem.ALUresult >> 2)] & 0xFFFFFF00;
+						memory[(exmem.ALUresult >> 2)] = masktemp | temp;
 						break;
 					
 					case 1:
-						memory[exmem.ALUresult] = memory[exmem.ALUresult] & 0xFFFF00FF;
+						masktemp = memory[(exmem.ALUresult >> 2)] & 0xFFFF00FF;
 						temp = temp << 8;
+						memory[(exmem.ALUresult >> 2)] = masktemp | temp;	
 						break;
 			
 					case 2:
-						memory[exmem.ALUresult] = memory[exmem.ALUresult] & 0xFF00FFFF;
+						masktemp = memory[(exmem.ALUresult >> 2)] & 0xFF00FFFF;
 						temp = temp << 16;
+						memory[(exmem.ALUresult >> 2)] = masktemp | temp;					
 						break;
 				
 					case 3:
-						memory[exmem.ALUresult] = memory[exmem.ALUresult] & 0x00FFFFFF;
+						masktemp = memory[(exmem.ALUresult >> 2)] & 0x00FFFFFF;
 						temp = temp << 24;
+						memory[(exmem.ALUresult >> 2)] = masktemp | temp;
 						break;
 				}
 				break;
 
 			case 0x29: // SH
-				temp = 0x0000FFFF & exmem.rtVal;
-				switch(graboffset)
+				temp = 0x0000FFFF & gregisters[exmem.rt];
+				switch(shadexmem.offset)
 				{
 					case 0:
-						memory[exmem.ALUresult] = memory[exmem.ALUresult] & 0xFFFF0000;
+						masktemp = memory[(exmem.ALUresult >> 2)] & 0xFFFF0000;
+						memory[(exmem.ALUresult >> 2)] = masktemp | temp;
 						break;
 			
 					case 2:
-						memory[exmem.ALUresult] = memory[exmem.ALUresult] & 0x0000FFFF;
+						masktemp = memory[(exmem.ALUresult >> 2)] & 0x0000FFFF;
 						temp = temp << 16;
+						memory[(exmem.ALUresult >> 2)] = masktemp | temp;
 						break;
 				}
 				break;
 
 			case 0x2B: // SW
-				// Do nothing; Store word needs unmodified rtVal
+				// Do nothing as entire word will be stored
+				memory[(exmem.ALUresult >> 2)] = gregisters[exmem.rt];
 				break;
 		}
-		memory[exmem.ALUresult] = memory[exmem.ALUresult] | temp;
 	}
 	if(exmem.memRead)
 	{
 		switch(exmem.opcode)
 		{
 			case 0x20: // LB
-				switch(graboffset)
+				switch(shadexmem.offset)
 				{
 					case 0:
-						shadmemwb.dataOut = int((memory[exmem.ALUresult] & 0x000000FF));
+						shadmemwb.dataOut = int32_t((memory[(exmem.ALUresult >> 2)] & 0x000000FF));
 						break;
 					
 					case 1:
-						shadmemwb.dataOut = int((memory[exmem.ALUresult] & 0x0000FF00) >> 8);
+						shadmemwb.dataOut = int32_t((memory[(exmem.ALUresult >> 2)] & 0x0000FF00) >> 8);
 						break;
 			
 					case 2:
-						shadmemwb.dataOut = int((memory[exmem.ALUresult] & 0x00FF0000) >> 16);
+						shadmemwb.dataOut = int32_t((memory[(exmem.ALUresult >> 2)] & 0x00FF0000) >> 16);
 						break;
 				
 					case 3:
-						shadmemwb.dataOut = int((memory[exmem.ALUresult] & 0xFF000000) >> 24);
+						shadmemwb.dataOut = int32_t((memory[(exmem.ALUresult >> 2)] & 0xFF000000) >> 24);
 						break;
 				}
 				break;
 
 			case 0x24: // LBU
-				switch(graboffset)
+				switch(shadexmem.offset)
 				{
 					case 0:
-						shadmemwb.dataOut = uint32_t((memory[exmem.ALUresult] & 0x000000FF));
+						shadmemwb.dataOut = uint32_t((memory[(exmem.ALUresult >> 2)] & 0x000000FF));
 						break;
 					
 					case 1:
-						shadmemwb.dataOut = uint32_t((memory[exmem.ALUresult] & 0x0000FF00) >> 8);
+						shadmemwb.dataOut = uint32_t((memory[(exmem.ALUresult >> 2)] & 0x0000FF00) >> 8);
 						break;
 			
 					case 2:
-						shadmemwb.dataOut = uint32_t((memory[exmem.ALUresult] & 0x00FF0000) >> 16);
+						shadmemwb.dataOut = uint32_t((memory[(exmem.ALUresult >> 2)] & 0x00FF0000) >> 16);
 						break;
 				
 					case 3:
-						shadmemwb.dataOut = uint32_t((memory[exmem.ALUresult] & 0xFF000000) >> 24);
+						shadmemwb.dataOut = uint32_t((memory[(exmem.ALUresult >> 2)] & 0xFF000000) >> 24);
 						break;
 				}
 				break;
 
 			case 0x25: // LHU
-				switch(graboffset)
+				switch(shadexmem.offset)
 				{
 					case 0:
-						shadmemwb.dataOut = uint32_t((memory[exmem.ALUresult] & 0x0000FFFF));
+						shadmemwb.dataOut = uint32_t((memory[(exmem.ALUresult >> 2)] & 0x0000FFFF));
 						break;
 								
 					case 2:
-						shadmemwb.dataOut = uint32_t((memory[exmem.ALUresult] & 0xFFFF0000) >> 16);
+						shadmemwb.dataOut = uint32_t((memory[(exmem.ALUresult >> 2)] & 0xFFFF0000) >> 16);
 						break;
 				
 				}
@@ -590,7 +623,7 @@ void MEM()
 				break;
 
 			case 0x23: // LW
-				shadmemwb.dataOut = memory[exmem.ALUresult];
+				shadmemwb.dataOut = memory[(exmem.ALUresult >> 2)];
 				break;
 		}
 	}
@@ -609,11 +642,11 @@ void MEM()
 
 void WB()
 {
-	if(memwb.memToReg && memwb.regWrite)
+	if(memwb.memToReg && memwb.regWrite && (memwb.WBreg != 0))
 	{
 		gregisters[memwb.WBreg] = memwb.dataOut;
 	}
-	else if(memwb.regWrite)
+	if(memwb.regWrite && !memwb.memToReg && (memwb.WBreg != 0))
 	{
 		gregisters[memwb.WBreg] = memwb.data;
 	}
@@ -624,8 +657,9 @@ void shadToNorm(int *iCount)
 	if(!stallPipe)
 	{
 		ifid = shadifid;
+		//std::cout << "pcNextShadToNorm: " << std::dec << pcNext << "\n";
 		PC.address = pcNext;
-		iCount++;
+		*iCount = *iCount + 1;
 	}
 	idex = shadidex;
 	exmem = shadexmem;
