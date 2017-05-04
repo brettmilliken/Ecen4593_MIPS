@@ -6,26 +6,37 @@ using namespace std;
 
 memory main_memory;
 bool _DEBUG = true;
+bool _DEBUG1 = true;
+bool _DEBUG2 = true;
+bool _DEBUG3 = true;
+bool stats = false; // toggles basic statistics for print status
+bool wordstats = false; // toggles word import stats
+bool hitstats = false; // toggles hit statistic printing
+bool fillprint = false; // toggles cache fill complete print
+bool taginfo = false; // toggles tag information on tag access
 bool early_start = false;
 bool write_through = false;
 
-void printStatus(){
-	status.access_count = status.read_count + status.write_count;
-	status.hit_count = status.read_hit + status.write_hit;
-	status.hit_rate = (double) status.hit_count/status.access_count;
+cache_stats cachestatus = {0,0,0,0,0,0,0,0.0};
 
-	printf("|-------STATISTICS--------|");
-	printf("access count: %d (read count: %d write count: %d)\n",status.access_count, status.read_count, status.write_count);
-	printf("hit rate: %f \n", status.hit_rate);
-	printf("hit count: %d (read hit count: %d  write hit count: %d ) \n", status.hit_count, status.read_hit, status.write_hit);
-	printf("miss count: %d \n", status.miss_count);
-	printf("|-------------------------|\n");	
+void printStatus(){
+	cachestatus.access_count = cachestatus.read_count + cachestatus.write_count;
+	cachestatus.hit_count = cachestatus.read_hit + cachestatus.write_hit;
+	cachestatus.hit_rate = (double) cachestatus.hit_count/cachestatus.access_count;
+	if(stats){
+		printf("|-------STATISTICS--------|");
+		printf("access count: %d (read count: %d write count: %d)\n",cachestatus.access_count, cachestatus.read_count, cachestatus.write_count);
+		printf("hit rate: %f \n", cachestatus.hit_rate);
+		printf("hit count: %d (read hit count: %d  write hit count: %d ) \n", cachestatus.hit_count, cachestatus.read_hit, cachestatus.write_hit);
+		printf("miss count: %d \n", cachestatus.miss_count);
+		printf("|-------------------------|\n");
+	}	
 }
 
 
 //CACHELINE CLASS
 cacheLine::cacheLine(){
-	tag = 0x0;
+	tag = 0;
 	valid = false;
 	
 	dirty = false;
@@ -67,10 +78,14 @@ cacheLine::cacheLine(){
 				break;
 			}
 		}
-		printf("Reading from Memory \n");
-		printf("Mem Address: %d", address);
+		if(wordstats){
+			printf("Reading from Memory \n");
+			printf("Mem Address: %d", address);
+		}
 		int data = main_memory.read(address);
-		printf(" Data: %d \n",data);
+		if(wordstats){	
+			printf(" Data: %d \n",data);
+		}
 		if(offset < words_per_line-1){
 			streamIn(lineIndex,Tag,offset,data,false);
 		}
@@ -83,9 +98,9 @@ cacheLine::cacheLine(){
 	//Inputs new data into a cacheline that is available or evicts the least
 	//recently used in orderto place new cache entry
 	void set::streamIn(int index,int tag, int offset, int newData, bool validity){
-		if(_DEBUG) printf("Stream IN-lineIndex: %d Tag: %d Offset: %d Data: %d \n",index,tag, offset, newData);
+		if(_DEBUG3) printf("Stream IN-lineIndex: %d Tag: %d Offset: %d Data: %d \n",index,tag, offset, newData);
 		cachelines[index]->data[offset] = newData;
-		cachelines[index]->tag = tag;
+		cachelines[index].tag = tag;
 		if(validity){
 			cachelines[index]->valid = true;
 			updateLRU(index);
@@ -152,10 +167,10 @@ cacheLine::cacheLine(){
 	
 	int cache::isHit(int tag, int setIndex){
 		for(int i = 0; i < lines_per_set;i++){
-			if(sets[setIndex]->cachelines[i]->tag == tag){
-				printf("IS HIT: TAGS ARE THE SAME - Line: %d \n",i);
+			if(sets[setIndex]->cachelines[i].tag == tag){
+				if(hitstats) printf("IS HIT: TAGS ARE THE SAME - Line: %d \n",i);
 				if(sets[setIndex]->cachelines[i]->valid){
-					printf("IS HIT: VALID - Returning line: %d \n",i);
+					if(hitstats) printf("IS HIT: VALID - Returning line: %d \n",i);
 					return i;
 				}
 			}
@@ -165,30 +180,31 @@ cacheLine::cacheLine(){
 	}
 	
 	int cache::read(int32_t address, bool doesCount,int &clk_cycle){
+		if(_DEBUG1) printf("READ \n");
 		int setIndex = getSetIndex(address);
 		int offset = getOffset(address);
 		int tag = getTag(address);
 		int data[words_per_line];
 		int net_cycle = 0;
 		
-		if(doesCount) status.read_count++;
+		if(doesCount) cachestatus.read_count++;
 		int hit = isHit(tag, setIndex);
-		printf("Tag: %d Set Index: %d Offset: %d Hit: %d \n",tag,setIndex,offset, hit);
+		if(taginfo) printf("Tag: %d Set Index: %d Offset: %d Hit: %d \n",tag,setIndex,offset, hit);
 		if(hit >= 0){	
 			if(_DEBUG) printf("Read: Hit \n");
-			if(doesCount) status.read_hit++;
+			if(doesCount) cachestatus.read_hit++;
 			return sets[setIndex]->streamOut(hit, offset);
 		}
 		else {
 			if(_DEBUG) printf("Read: Miss \n");
-			if(doesCount) status.miss_count++;
+			if(doesCount) cachestatus.miss_count++;
 			if(!sets[setIndex]->emptyLineAvailable()){
 				if(_DEBUG) printf("Evicting... \n");
 				int lru = sets[setIndex]->evict_LRU();
 				if(!write_through){
 					if(_DEBUG) printf("Writing Back to the MEMZ \n");
 					int evict_data;
-					int evict_tag = sets[setIndex]->cachelines[lru]->tag;
+					int evict_tag = sets[setIndex]->cachelines[lru].tag;
 					int evict_address = (evict_tag << 7) + (setIndex << 2);
 					for(int evict_off = 0; evict_off < words_per_line; evict_off++){
 						evict_data = sets[setIndex]->streamOut(lru,evict_off);
@@ -216,7 +232,7 @@ cacheLine::cacheLine(){
 			}
 			if(_DEBUG) printf("NET CYCLE: %d", net_cycle);
 			clk_cycle += (net_cycle - 3 + offset);
-			printf("CACHE-FILL COMPLETE \n");
+			if(fillprint) printf("CACHE-FILL COMPLETE \n");
 			return data[offset];
 		}
 	}
@@ -283,15 +299,16 @@ cacheLine::cacheLine(){
 	
 	//Write Policy: 
 	void cache::write(int32_t address, int data, int &clk_cycle){
+		if(_DEBUG1) printf("WRITE!! \n \n");
 		int tag = getTag(address);
 		int setIndex = getSetIndex(address);
 		int offset = getOffset(address);
 		int block = address-offset;
-		status.write_count++;
+		cachestatus.write_count++;
 		int hit = isHit(tag, setIndex);
 		if(hit >= 0){
-			if(_DEBUG) printf("Write: HIT! \n");
-			status.write_hit++  ;
+			if(_DEBUG1) printf("Write: HIT! \n");
+			cachestatus.write_hit++  ;
 			sets[setIndex]->streamIn(hit,tag,offset,data,true);
 			if(write_through){			
 				loadBuffer(address, data);
@@ -302,26 +319,26 @@ cacheLine::cacheLine(){
 			return;
 		}
 		else{ 
-			if(_DEBUG) printf("Write:MISS \n");
-			status.miss_count++;
+			if(_DEBUG1) printf("Write:MISS \n");
+			cachestatus.miss_count++;
 			int newData;
 			if(!sets[setIndex]->emptyLineAvailable()){
-				if(_DEBUG) printf("Evicting... \n");
+				if(_DEBUG1) printf("Evicting... \n");
 				int lru = sets[setIndex]->evict_LRU();
 				if(!write_through && sets[setIndex]->cachelines[lru]->dirty){
-					if(_DEBUG) printf("Writing Back to the MEMZ \n");
+					if(_DEBUG1) printf("Write Back: Writing to Memory \n");
 					int evict_data;
-					int evict_tag = sets[setIndex]->cachelines[lru]->tag;
+					int evict_tag = sets[setIndex]->cachelines[lru].tag;
 					int evict_address = (evict_tag << 7) + (setIndex << 2);
 					for(int evict_off = 0; evict_off < words_per_line; evict_off++){
 						evict_data = sets[setIndex]->streamOut(lru,evict_off);
 						main_memory.write(evict_address+evict_off, evict_data);
-						if(_DEBUG) printf("Memory Write \n Adress - %d Data - %d \n",evict_address, evict_data);
+						if(_DEBUG2) printf("Memory Write \n Adress - %d Data - %d \n",evict_address, evict_data);
 					}
 					main_memory.counter += 14;
 				}
 			}
-			if(_DEBUG) printf("Reading in Block... \n");
+			if(_DEBUG1) printf("Reading in Memory Block \n");
 			int lineIndex;
 			for(int i=0; i < lines_per_set; i++){
 				if(sets[setIndex]->cachelines[i]->valid == false){
@@ -332,10 +349,12 @@ cacheLine::cacheLine(){
 			for(int j = 0; j<words_per_line-1;j++){
 				newData = main_memory.read(block+j);
 				sets[setIndex]->streamIn(lineIndex, tag, j,newData,false); 
+				if(_DEBUG2) printf("NEW DATA: %d ADDRESS: %d \n",newData, (block+j));
 			}
 			newData = main_memory.read(block+words_per_line);
 			sets[setIndex]->streamIn(lineIndex, tag, words_per_line-1,newData,true);
 			sets[setIndex]->streamIn(lineIndex, tag, offset,data,true); 
+			if(_DEBUG2) printf("WRITE OUTPUT: NEW DATA: %d ADDRESS: %d \n",newData, address);
 			loadBuffer(address,data);
 			clk_cycle += 14;
 			return;

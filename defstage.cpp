@@ -17,8 +17,8 @@ int pcNext;
 int temp;
 int masktemp;
 bool forward;
-extern cache dcache;
-extern cache icache;
+extern cache* dcache;
+extern cache* icache;
 extern struct pc PC;
 int32_t signTemp;
 IF_ID ifid;
@@ -127,7 +127,7 @@ int32_t signExtend(int offset)
 void IF()
 {
 	stallPipe = false;
-	shadifid.instruction = icache.read(PC.address,true,cycle_count); // store current instruction
+	shadifid.instruction = icache->read(PC.address,true,cycle_count); // store current instruction
 	// increment pc value and store
 	shadifid.PCincremented = PC.address + 1;
 	pcNext = shadifid.PCincremented;
@@ -510,34 +510,34 @@ void MEM()
 				{
 					case 0:
 						wordaddress = (exmem.ALUresult >> 2);
-						masktemp = dcache.read(wordaddress,false,cycle_count);
+						masktemp = dcache->read(wordaddress,false,cycle_count);
 						masktemp = masktemp & 0xFFFFFF00;
 						storetemp = masktemp | temp;
-						dcache.write(wordaddress,storetemp,cycle_count);
+						dcache->write(wordaddress,storetemp,cycle_count);
 						break;
 					
 					case 1:
 						wordaddress = (exmem.ALUresult >> 2);
-						masktemp = dcache.read(wordaddress,false,cycle_count) & 0xFFFF00FF;
+						masktemp = dcache->read(wordaddress,false,cycle_count) & 0xFFFF00FF;
 						temp = temp << 8;
 						storetemp = masktemp | temp;	
-						dcache.write(wordaddress,storetemp,cycle_count);
+						dcache->write(wordaddress,storetemp,cycle_count);
 						break;
 			
 					case 2:
 						wordaddress = (exmem.ALUresult >> 2);
-						masktemp = dcache.read(wordaddress,false,cycle_count) & 0xFF00FFFF;
+						masktemp = dcache->read(wordaddress,false,cycle_count) & 0xFF00FFFF;
 						temp = temp << 16;
 						storetemp = masktemp | temp;	
-						dcache.write(wordaddress,storetemp,cycle_count);				
+						dcache->write(wordaddress,storetemp,cycle_count);				
 						break;
 				
 					case 3:
 						wordaddress = (exmem.ALUresult >> 2);
-						masktemp = dcache.read(wordaddress,false,cycle_count) & 0x00FFFFFF;
+						masktemp = dcache->read(wordaddress,false,cycle_count) & 0x00FFFFFF;
 						temp = temp << 24;
 						storetemp = masktemp | temp;
-						dcache.write(wordaddress,storetemp,cycle_count);
+						dcache->write(wordaddress,storetemp,cycle_count);
 						break;
 				}
 				break;
@@ -548,17 +548,17 @@ void MEM()
 				{
 					case 0:
 						wordaddress = (exmem.ALUresult >> 2);
-						masktemp = dcache.read(wordaddress,false,cycle_count) & 0xFFFF0000;
+						masktemp = dcache->read(wordaddress,false,cycle_count) & 0xFFFF0000;
 						storetemp = masktemp | temp;
-						dcache.write(wordaddress,storetemp,cycle_count);
+						dcache->write(wordaddress,storetemp,cycle_count);
 						break;
 			
 					case 2:
 						wordaddress = (exmem.ALUresult >> 2);
-						masktemp = dcache.read(wordaddress,false,cycle_count) & 0x0000FFFF;
+						masktemp = dcache->read(wordaddress,false,cycle_count) & 0x0000FFFF;
 						temp = temp << 16;
 						storetemp = masktemp | temp;
-						dcache.write(wordaddress,storetemp,cycle_count);
+						dcache->write(wordaddress,storetemp,cycle_count);
 						break;
 				}
 				break;
@@ -567,7 +567,7 @@ void MEM()
 				// Do nothing as entire word will be stored
 				wordaddress = (exmem.ALUresult >> 2);
 				storetemp = gregisters[exmem.rt];
-				dcache.write(wordaddress,storetemp,cycle_count);
+				dcache->write(wordaddress,storetemp,cycle_count);
 				break;
 		}
 	}
@@ -580,22 +580,22 @@ void MEM()
 				{
 					case 0:
 						wordaddress = (exmem.ALUresult >> 2);
-						shadmemwb.dataOut = int32_t((dcache.read(wordaddress,true,cycle_count) & 0x000000FF));
+						shadmemwb.dataOut = int32_t((dcache->read(wordaddress,true,cycle_count) & 0x000000FF));
 						break;
 					
 					case 1:
 						wordaddress = (exmem.ALUresult >> 2);
-						shadmemwb.dataOut = int32_t((dcache.read(wordaddress,true,cycle_count) & 0x0000FF00) >> 8);
+						shadmemwb.dataOut = int32_t((dcache->read(wordaddress,true,cycle_count) & 0x0000FF00) >> 8);
 						break;
 			
 					case 2:
 						wordaddress = (exmem.ALUresult >> 2);
-						shadmemwb.dataOut = int32_t((dcache.read(wordaddress,true,cycle_count) & 0x00FF0000) >> 16);
+						shadmemwb.dataOut = int32_t((dcache->read(wordaddress,true,cycle_count) & 0x00FF0000) >> 16);
 						break;
 				
 					case 3:
 						wordaddress = (exmem.ALUresult >> 2);
-						shadmemwb.dataOut = int32_t((dcache.read(wordaddress,true,cycle_count) & 0xFF000000) >> 24);
+						shadmemwb.dataOut = int32_t((dcache->read(wordaddress,true,cycle_count) & 0xFF000000) >> 24);
 						break;
 				}
 				break;
@@ -605,22 +605,22 @@ void MEM()
 				{
 					case 0:
 						wordaddress = (exmem.ALUresult >> 2);
-						shadmemwb.dataOut = uint32_t((dcache.read(wordaddress,true,cycle_count) & 0x000000FF));
+						shadmemwb.dataOut = uint32_t((dcache->read(wordaddress,true,cycle_count) & 0x000000FF));
 						break;
 					
 					case 1:
 						wordaddress = (exmem.ALUresult >> 2);
-						shadmemwb.dataOut = uint32_t((dcache.read(wordaddress,true,cycle_count) & 0x0000FF00) >> 8);
+						shadmemwb.dataOut = uint32_t((dcache->read(wordaddress,true,cycle_count) & 0x0000FF00) >> 8);
 						break;
 			
 					case 2:
 						wordaddress = (exmem.ALUresult >> 2);
-						shadmemwb.dataOut = uint32_t((dcache.read(wordaddress,true,cycle_count) & 0x00FF0000) >> 16);
+						shadmemwb.dataOut = uint32_t((dcache->read(wordaddress,true,cycle_count) & 0x00FF0000) >> 16);
 						break;
 				
 					case 3:
 						wordaddress = (exmem.ALUresult >> 2);
-						shadmemwb.dataOut = uint32_t(dcache.read(wordaddress,true,cycle_count) >> 24);
+						shadmemwb.dataOut = uint32_t(dcache->read(wordaddress,true,cycle_count) >> 24);
 						break;
 				}
 				break;
@@ -630,12 +630,12 @@ void MEM()
 				{
 					case 0:
 						wordaddress = (exmem.ALUresult >> 2);
-						shadmemwb.dataOut = uint32_t((dcache.read(wordaddress,true,cycle_count) & 0x0000FFFF));
+						shadmemwb.dataOut = uint32_t((dcache->read(wordaddress,true,cycle_count) & 0x0000FFFF));
 						break;
 								
 					case 2:
 						wordaddress = (exmem.ALUresult >> 2);
-						shadmemwb.dataOut = uint32_t((dcache.read(wordaddress,true,cycle_count) & 0xFFFF0000) >> 16);
+						shadmemwb.dataOut = uint32_t((dcache->read(wordaddress,true,cycle_count) & 0xFFFF0000) >> 16);
 						break;
 				
 				}
@@ -647,7 +647,7 @@ void MEM()
 
 			case 0x23: // LW
 				wordaddress = (exmem.ALUresult >> 2);
-				shadmemwb.dataOut = dcache.read(wordaddress,true,cycle_count);
+				shadmemwb.dataOut = dcache->read(wordaddress,true,cycle_count);
 				break;
 		}
 	}

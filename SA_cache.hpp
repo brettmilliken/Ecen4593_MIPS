@@ -32,7 +32,7 @@ struct cache_stats{
 	int write_hit;
 	int read_hit;
 	double hit_rate;	
-} status = {0,0,0,0,0,0,0,0.0};
+};// cachestatus = {0,0,0,0,0,0,0,0.0};
 
 struct buffer_entry{
 	int32_t address;

@@ -32,6 +32,8 @@ pc PC; // define program counter
 //extern struct MEM_WB memwb; // mem/wb stage register
 //extern struct MEM_WB shadmemwb;
 int gregisters[32];
+cache* icache = new cache(2,32);
+cache* dcache = new cache(1,64);
 
 //int memory[1200];
 // end define global variables
@@ -40,8 +42,7 @@ int main(void)
 {
 
 	Initialize_Simulation_Memory();
-	cache* icache = new cache(2,32);
-	cache* dcache = new cache(1,64);
+
 
   /* Infinite loop */
   while (1) {
