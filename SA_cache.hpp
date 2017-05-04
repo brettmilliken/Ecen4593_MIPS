@@ -72,7 +72,7 @@ class cache{
 	cache(int lines_in_set, int set_num);
 	~cache();
 	int read(int32_t address, bool doesCount,int &clk_cycle);
-	void write(int32_t address, int data, int &clk_cycle);
+	void write(int32_t address, int data);
 	void loadBuffer(int32_t address, int data);
 	int early_start(int32_t address, int &cycle);
 	void writeFromBuffer();

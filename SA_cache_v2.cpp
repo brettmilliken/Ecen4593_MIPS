@@ -28,6 +28,7 @@ void printStatus(){
 cacheLine::cacheLine(){
 	tag = 0x0;
 	valid = false;
+	
 	dirty = false;
 	lru = 0; 
 	for(int i = 0; i<words_per_line;i++)
@@ -282,7 +283,7 @@ cacheLine::cacheLine(){
 */
 	
 	//Write Policy: 
-	void cache::write(int32_t address, int data){
+	void cache::write(int32_t address, int32_t data){
 		int tag = getTag(address);
 		int setIndex = getSetIndex(address);
 		int offset = getOffset(address);
@@ -299,7 +300,6 @@ cacheLine::cacheLine(){
 			else {
 				sets[setIndex]->cachelines[hit]->dirty = true;
 			}
-			clk_cycle += 14;
 			return;
 		}
 		else{ 
@@ -338,7 +338,6 @@ cacheLine::cacheLine(){
 			sets[setIndex]->streamIn(lineIndex, tag, words_per_line-1,newData,true);
 			sets[setIndex]->streamIn(lineIndex, tag, offset,data,true); 
 			loadBuffer(address,data);
-			clk_cycle += 14; 
 			return;
 		}
 	}
