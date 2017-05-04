@@ -13,7 +13,6 @@
 bool stallPipe;
 int pcNext;
 int temp;
-int memes;
 int masktemp;
 bool forward;
 extern struct pc PC;
@@ -436,17 +435,14 @@ void EX()
 
         case 0x20: // LB
             shadexmem.ALUresult = idex.rsVal + idex.signedimmediate;
-			shadexmem.offset = idex.signedimmediate % 4;
             break;
 
         case 0x24: // LBU
             shadexmem.ALUresult = idex.rsVal + idex.signedimmediate;
-            shadexmem.offset = (idex.signedimmediate % 4);
             break;
 
         case 0x25: // LHU
 			shadexmem.ALUresult = idex.rsVal + idex.signedimmediate;
-			shadexmem.offset = idex.signedimmediate % 4;
             break;
 
         case 0xF: // LUI
@@ -463,14 +459,10 @@ void EX()
 
         case 0x28: // SB
 			shadexmem.ALUresult = idex.rsVal + idex.signedimmediate;
-			shadexmem.offset = idex.signedimmediate % 4;
-			std::cout << shadexmem.offset << "\n";
-			memes = 1;
             break;
 
         case 0x29: // SH
 			shadexmem.ALUresult = idex.rsVal + idex.signedimmediate;
-			shadexmem.offset = idex.signedimmediate % 4;
             break;
 
         case 0x2B: // SW
@@ -501,6 +493,7 @@ void MEM()
 	shadmemwb.regWrite = exmem.regWrite;
 	shadmemwb.memToReg = exmem.memToReg;
 	shadmemwb.data = exmem.ALUresult;
+	uint8_t offset = exmem.ALUresult%4;
 
 	if(exmem.memWrite)
 	{
@@ -508,10 +501,11 @@ void MEM()
 		{
 			case 0x28: // SB
 				temp = (0x000000FF & gregisters[exmem.rt]);
-				switch(exmem.offset)
+				switch(offset)
 				{
 					case 0:
-						masktemp = memory[(exmem.ALUresult >> 2)] & 0xFFFFFF00;
+						masktemp = memory[(exmem.ALUresult >> 2)];
+						masktemp = masktemp & 0xFFFFFF00;
 						memory[(exmem.ALUresult >> 2)] = masktemp | temp;
 						break;
 					
@@ -537,7 +531,7 @@ void MEM()
 
 			case 0x29: // SH
 				temp = 0x0000FFFF & gregisters[exmem.rt];
-				switch(shadexmem.offset)
+				switch(offset)
 				{
 					case 0:
 						masktemp = memory[(exmem.ALUresult >> 2)] & 0xFFFF0000;
@@ -563,7 +557,7 @@ void MEM()
 		switch(exmem.opcode)
 		{
 			case 0x20: // LB
-				switch(shadexmem.offset)
+				switch(offset)
 				{
 					case 0:
 						shadmemwb.dataOut = int32_t((memory[(exmem.ALUresult >> 2)] & 0x000000FF));
@@ -584,7 +578,7 @@ void MEM()
 				break;
 
 			case 0x24: // LBU
-				switch(shadexmem.offset)
+				switch(offset)
 				{
 					case 0:
 						shadmemwb.dataOut = uint32_t((memory[(exmem.ALUresult >> 2)] & 0x000000FF));
@@ -605,7 +599,7 @@ void MEM()
 				break;
 
 			case 0x25: // LHU
-				switch(shadexmem.offset)
+				switch(offset)
 				{
 					case 0:
 						shadmemwb.dataOut = uint32_t((memory[(exmem.ALUresult >> 2)] & 0x0000FFFF));

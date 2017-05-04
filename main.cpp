@@ -74,13 +74,13 @@ int main(void)
 		  
 	  }
 	  //cout<< "PC Address post while: " << PC.address << "\n";
-	  cout << "Desired: " << 1 << " " <<"Actual: " << memory[6] << "\n";
-	  cout << std::hex << "Desired: " << 0x20696e71 << " " << "Actual: " << memory[7] << "\n";
-	  cout << "Desired: " << 0x206e7376 << " " << "Actual: " << memory[8] << "\n";
-	  cout << "Desired: " << 0x20696e71 << " " << "Actual: " << memory[9] << "\n";
-	  	for(int k = 243; k<500; k++){
+	  cout << "Desired: " << 112 << " " <<"Actual: " << memory[6] << "\n";
+	  cout << "Desired: " << 29355 << " " << "Actual: " << memory[7] << "\n";
+	  cout << "Desired: " << 14305 << " " << "Actual: " << memory[8] << "\n";
+	  cout << "Desired: " << 0 << " " << "Actual: " << memory[9] << "\n";
+	  /*	for(int k = 243; k<500; k++){
 			cout << std::dec <<"memory location: " << k << std::hex << " data: " << memory[k] << "\n";
-		}
+		}*/
 
 	  //cout << "instruction count end: " << iCount << "\n";
 	  //cout << "cycle count end: " << cycle_count << "\n";	 

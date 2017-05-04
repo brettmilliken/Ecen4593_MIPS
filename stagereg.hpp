@@ -59,7 +59,6 @@ struct EX_MEM
 	bool memRead;
 	bool memWrite;
 	bool branch;
-	uint8_t offset;
 };
 
 //extern struct EX_MEM exmem;
