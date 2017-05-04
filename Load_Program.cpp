@@ -880,6 +880,6 @@ unsigned int program_image[memory_size] = {
 void Initialize_Simulation_Memory(void){
 
 	for (int i=0; i < memory_size; i++){
-		memory[i] = program_image[i];
+		main_memory.write(i,program_image[i]);
 	}
 }

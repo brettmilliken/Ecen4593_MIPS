@@ -7,6 +7,9 @@
 #include <iostream>
 #include <queue>
 
+#ifndef SACACHE_HPP
+#define SACACHE_HPP
+
 #define words_per_line 4
 #define num_of_sets 32
 #define lines_per_set 2
@@ -82,3 +85,4 @@ class cache{
 	int getSetIndex(int32_t address);
 	int isHit(int tag, int setIndex);
 };
+#endif

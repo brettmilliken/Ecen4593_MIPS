@@ -8,6 +8,7 @@
 #include "pc.hpp" 
 #include "Load_Program.hpp"
 #include "defstage.hpp" 
+#include "SA_cache.hpp"
 //#include "stagereg.hpp"
 
 using namespace std;
@@ -27,8 +28,8 @@ pc PC; // define program counter
 //extern struct EX_MEM shadexmem;
 //extern struct MEM_WB memwb; // mem/wb stage register
 //extern struct MEM_WB shadmemwb;
-extern int memory[];
 int gregisters[32];
+
 //int memory[1200];
 // end define global variables
 
@@ -36,14 +37,17 @@ int main(void)
 {
 
 	Initialize_Simulation_Memory();
+	cache* icache = new cache(2,32);
+	cache* dcache = new cache(1,64);
+
   /* Infinite loop */
   while (1) {
 
 	  /* initialize state elements */
 
-	  PC.address = memory[5];
-	  gregisters[sp] = memory[0];
-	  gregisters[fp] = memory[1];
+	  PC.address = main_memory.read(5);
+	  gregisters[sp] = main_memory.read(0);
+	  gregisters[fp] = main_memory.read(1);
 	  cycle_count = 0;
 	  
 	  while (PC.address != 0x00000000){
@@ -74,10 +78,10 @@ int main(void)
 		  
 	  }
 	  //cout<< "PC Address post while: " << PC.address << "\n";
-	  cout << "Desired: " << 112 << " " <<"Actual: " << memory[6] << "\n";
-	  cout << "Desired: " << 29355 << " " << "Actual: " << memory[7] << "\n";
-	  cout << "Desired: " << 14305 << " " << "Actual: " << memory[8] << "\n";
-	  cout << "Desired: " << 0 << " " << "Actual: " << memory[9] << "\n";
+	  cout << "Desired: " << 112 << " " <<"Actual: " << main_memory.read(6) << "\n";
+	  cout << "Desired: " << 29355 << " " << "Actual: " << main_memory.read(7) << "\n";
+	  cout << "Desired: " << 14305 << " " << "Actual: " << main_memory.read(8) << "\n";
+	  cout << "Desired: " << 0 << " " << "Actual: " << main_memory.read(9) << "\n";
 	  /*	for(int k = 243; k<500; k++){
 			cout << std::dec <<"memory location: " << k << std::hex << " data: " << memory[k] << "\n";
 		}*/

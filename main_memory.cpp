@@ -14,7 +14,7 @@ bool memory::shouldDelay(){
 }
 
 
-void memory::write(int32_t address, int32_t data){
+void memory::write(int address, int data){
 		memz[address] = data;
 }
 

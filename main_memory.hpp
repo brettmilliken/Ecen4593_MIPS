@@ -6,8 +6,8 @@
 #include<string>
 #include<iostream>
 
-#ifndef MM_INC	
-#define MM_INC
+#ifndef MAINMEMORY_HPP
+#define MAINMEMORY_HPP
 #define mem_size 10000
 
 class memory {
@@ -20,7 +20,7 @@ class memory {
 	bool busy;
 	
 	int32_t read(int32_t address);
-	void write(int32_t address, int32_t data);		
+	void write(int address, int data);		
 	bool shouldDelay();
 	void addtoCounter(int time);
 	

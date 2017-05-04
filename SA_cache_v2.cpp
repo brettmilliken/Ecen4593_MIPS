@@ -3,7 +3,7 @@
 #include "main_memory.cpp"
 using namespace std;
 
-#define miss_penalty 40
+#define miss_penalty 14
 
 memory main_memory;
 bool _DEBUG = true;
@@ -373,7 +373,7 @@ cacheLine::cacheLine(){
 		main_memory.counter = miss_penalty;
 	}
 	
-	
+/*
 
 int main(){
 	int clk = 0;
@@ -421,3 +421,4 @@ int main(){
 	
 	return 1;
 }
+*/
