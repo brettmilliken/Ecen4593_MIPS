@@ -28,6 +28,7 @@ void printStatus(){
 cacheLine::cacheLine(){
 	tag = 0x0;
 	valid = false;
+	
 	dirty = false;
 	lru = 0; 
 	for(int i = 0; i<words_per_line;i++)
