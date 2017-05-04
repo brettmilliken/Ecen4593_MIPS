@@ -1,9 +1,11 @@
 /* Porting example code to test */
 #include "Load_Program.hpp"
+#include "main_memory.hpp"
+
+extern memory main_memory;
 
 const int memory_size = 1200;
 
-unsigned int memory[memory_size];
 
 unsigned int program_image[memory_size] = {
 	

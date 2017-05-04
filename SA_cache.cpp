@@ -1,9 +1,8 @@
 #include "SA_cache.hpp"
 #include "main_memory.hpp"
-#include "main_memory.cpp"
 using namespace std;
 
-#define miss_penalty 14
+//#define miss_penalty 14
 
 memory main_memory;
 bool _DEBUG = true;
@@ -283,7 +282,7 @@ cacheLine::cacheLine(){
 */
 	
 	//Write Policy: 
-	void cache::write(int32_t address, int32_t data){
+	void cache::write(int32_t address, int data, int &clk_cycle){
 		int tag = getTag(address);
 		int setIndex = getSetIndex(address);
 		int offset = getOffset(address);
@@ -338,6 +337,7 @@ cacheLine::cacheLine(){
 			sets[setIndex]->streamIn(lineIndex, tag, words_per_line-1,newData,true);
 			sets[setIndex]->streamIn(lineIndex, tag, offset,data,true); 
 			loadBuffer(address,data);
+			clk_cycle += 14;
 			return;
 		}
 	}

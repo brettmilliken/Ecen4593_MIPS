@@ -9,7 +9,9 @@
 #include "Load_Program.hpp"
 #include "defstage.hpp" 
 #include "SA_cache.hpp"
+#include "main_memory.hpp"
 //#include "stagereg.hpp"
+
 
 using namespace std;
 
@@ -19,6 +21,7 @@ int sp = 29;
 int fp = 30;
 int iCount = 0;
 int cycle_count = 0;
+extern memory main_memory;
 pc PC; // define program counter
 //extern struct IF_ID ifid; // if/id stage register
 //extern struct IF_ID shadifid;
