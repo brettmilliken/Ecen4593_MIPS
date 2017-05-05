@@ -5,10 +5,11 @@ using namespace std;
 //#define miss_penalty 14
 
 memory main_memory;
-bool _DEBUG = true;
-bool _DEBUG1 = true;
-bool _DEBUG2 = true;
-bool _DEBUG3 = true;
+bool _DEBUG = false;
+bool _DEBUG1 = false;
+bool _DEBUG2 = false;
+bool _DEBUG3 = false;
+bool _DEBUGADDRESS = false;
 bool stats = false; // toggles basic statistics for print status
 bool wordstats = false; // toggles word import stats
 bool hitstats = false; // toggles hit statistic printing
@@ -41,7 +42,7 @@ cacheLine::cacheLine(){
 	
 	dirty = false;
 	lru = 0; 
-	for(int i = 0; i<words_per_line;i++)
+	for(int i = 0; i< words_per_line;i++)
 		data[i] = 0;
 	}
 
@@ -63,8 +64,11 @@ cacheLine::cacheLine(){
 
 //SET CLASS
 	set::set(int lines){
-		for(int i = 0; i< lines; i++)
-			cachelines[i] = new cacheLine();
+		int i;
+		cacheLine* temp;
+		for(i = 0; i< lines; i++)
+			temp = new cacheLine();
+			cachelines[i] = temp;
 	}
 	
 	int set::importWord(int Tag, int setIndex, int offset){
@@ -100,7 +104,7 @@ cacheLine::cacheLine(){
 	void set::streamIn(int index,int tag, int offset, int newData, bool validity){
 		if(_DEBUG3) printf("Stream IN-lineIndex: %d Tag: %d Offset: %d Data: %d \n",index,tag, offset, newData);
 		cachelines[index]->data[offset] = newData;
-		cachelines[index].tag = tag;
+		cachelines[index]->tag = tag;
 		if(validity){
 			cachelines[index]->valid = true;
 			updateLRU(index);
@@ -167,7 +171,7 @@ cacheLine::cacheLine(){
 	
 	int cache::isHit(int tag, int setIndex){
 		for(int i = 0; i < lines_per_set;i++){
-			if(sets[setIndex]->cachelines[i].tag == tag){
+			if(sets[setIndex]->cachelines[i]->tag == tag){
 				if(hitstats) printf("IS HIT: TAGS ARE THE SAME - Line: %d \n",i);
 				if(sets[setIndex]->cachelines[i]->valid){
 					if(hitstats) printf("IS HIT: VALID - Returning line: %d \n",i);
@@ -204,7 +208,7 @@ cacheLine::cacheLine(){
 				if(!write_through){
 					if(_DEBUG) printf("Writing Back to the MEMZ \n");
 					int evict_data;
-					int evict_tag = sets[setIndex]->cachelines[lru].tag;
+					int evict_tag = sets[setIndex]->cachelines[lru]->tag;
 					int evict_address = (evict_tag << 7) + (setIndex << 2);
 					for(int evict_off = 0; evict_off < words_per_line; evict_off++){
 						evict_data = sets[setIndex]->streamOut(lru,evict_off);
@@ -301,6 +305,10 @@ cacheLine::cacheLine(){
 	void cache::write(int32_t address, int data, int &clk_cycle){
 		if(_DEBUG1) printf("WRITE!! \n \n");
 		int tag = getTag(address);
+		if(_DEBUGADDRESS) {
+			printf("ADDRESS: %d\n",address);
+			printf("TAG: %d\n",tag);
+		}
 		int setIndex = getSetIndex(address);
 		int offset = getOffset(address);
 		int block = address-offset;
@@ -328,7 +336,7 @@ cacheLine::cacheLine(){
 				if(!write_through && sets[setIndex]->cachelines[lru]->dirty){
 					if(_DEBUG1) printf("Write Back: Writing to Memory \n");
 					int evict_data;
-					int evict_tag = sets[setIndex]->cachelines[lru].tag;
+					int evict_tag = sets[setIndex]->cachelines[lru]->tag;
 					int evict_address = (evict_tag << 7) + (setIndex << 2);
 					for(int evict_off = 0; evict_off < words_per_line; evict_off++){
 						evict_data = sets[setIndex]->streamOut(lru,evict_off);
