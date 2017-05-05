@@ -94,7 +94,7 @@ unsigned int program_image[memory_size] = {
 	
 	
 	
-	
+	// program 1
 	
 	
 	0x00000bb8,	//	$sp = 3000
@@ -593,7 +593,7 @@ unsigned int program_image[memory_size] = {
 	
 	
 	
-	
+	// program 2
 	
 	
 	

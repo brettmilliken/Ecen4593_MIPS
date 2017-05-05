@@ -5,7 +5,7 @@ using namespace std;
 //#define miss_penalty 14
 
 memory main_memory;
-bool _DEBUG = false;
+bool _DEBUG = true;
 bool _DEBUG1 = false;
 bool _DEBUG2 = false;
 bool _DEBUG3 = false;
@@ -65,10 +65,14 @@ cacheLine::cacheLine(){
 //SET CLASS
 	set::set(int lines){
 		int i;
-		cacheLine* temp;
-		for(i = 0; i< lines; i++)
-			temp = new cacheLine();
-			cachelines[i] = temp;
+		//cacheLine* temp;
+		//for(i = 0; i< lines; i++)
+		//	temp = new cacheLine();
+		//	cachelines[i] = temp;
+		cachelines = (cacheLine*) malloc((sizeof(cacheLine) * lines));
+		for(i = 0; i< lines; i++) {
+			 new (cachelines + i) cacheLine();
+		}
 	}
 	
 	int set::importWord(int Tag, int setIndex, int offset){
@@ -76,8 +80,8 @@ cacheLine::cacheLine(){
 		
 		int lineIndex;
 		for(int i=0; i < lines_per_set; i++){
-			if(_DEBUG) printf("Line: %d Valid Bit: %d \n", i, cachelines[i]->valid);
-			if(cachelines[i]->valid == false){
+			if(_DEBUG) printf("Line: %d Valid Bit: %d \n", i, cachelines[i].valid);
+			if(cachelines[i].valid == false){
 				lineIndex = i;
 				break;
 			}
@@ -103,15 +107,15 @@ cacheLine::cacheLine(){
 	//recently used in orderto place new cache entry
 	void set::streamIn(int index,int tag, int offset, int newData, bool validity){
 		if(_DEBUG3) printf("Stream IN-lineIndex: %d Tag: %d Offset: %d Data: %d \n",index,tag, offset, newData);
-		cachelines[index]->data[offset] = newData;
-		cachelines[index]->tag = tag;
+		cachelines[index].data[offset] = newData;
+		cachelines[index].tag = tag;
 		if(validity){
-			cachelines[index]->valid = true;
+			cachelines[index].valid = true;
 			updateLRU(index);
 		}
 		else{
-			cachelines[index]->valid = false;
-			cachelines[index]->dirty = false;
+			cachelines[index].valid = false;
+			cachelines[index].dirty = false;
 		}	
 		return;
 	}
@@ -119,17 +123,17 @@ cacheLine::cacheLine(){
 	//Streams out data from a cacheline
 	int set::streamOut(int lineIndex, int offset){
 		updateLRU(lineIndex);
-		return cachelines[lineIndex]->data[offset];
+		return cachelines[lineIndex].data[offset];
 	}
 	
 	//Updates least recently used line in a set
 	void set::updateLRU(int lineIndex){
 		for(int i=0; i< lineIndex;i++){
-			if(cachelines[i]->valid){
-				cachelines[i]->lru++;
+			if(cachelines[i].valid){
+				cachelines[i].lru++;
 			}
 		}
-		cachelines[lineIndex]->lru = 0;
+		cachelines[lineIndex].lru = 0;
 		return;
 	}
 	
@@ -138,8 +142,8 @@ cacheLine::cacheLine(){
 	
 	int set::evict_LRU(){
 		for(int i= 0; i<lines_per_set; i++){
-			if(cachelines[i]->lru == (lines_per_set-1)){
-				cachelines[i]->valid = false;
+			if(cachelines[i].lru == (lines_per_set-1)){
+				cachelines[i].valid = false;
 				return i;
 			}
 		}
@@ -148,11 +152,15 @@ cacheLine::cacheLine(){
 	
 	bool set::emptyLineAvailable(){
 		for(int i=0; i<lines_per_set;i++){
-			if(cachelines[i]->valid == false){
+			if(cachelines[i].valid == false){
 				return true;
 			}
 		}
 		return false;
+	}
+	
+	set::~set(){
+		free(cachelines);
 	}
 	
 
@@ -171,9 +179,9 @@ cacheLine::cacheLine(){
 	
 	int cache::isHit(int tag, int setIndex){
 		for(int i = 0; i < lines_per_set;i++){
-			if(sets[setIndex]->cachelines[i]->tag == tag){
+			if(sets[setIndex]->cachelines[i].tag == tag){
 				if(hitstats) printf("IS HIT: TAGS ARE THE SAME - Line: %d \n",i);
-				if(sets[setIndex]->cachelines[i]->valid){
+				if(sets[setIndex]->cachelines[i].valid){
 					if(hitstats) printf("IS HIT: VALID - Returning line: %d \n",i);
 					return i;
 				}
@@ -208,7 +216,7 @@ cacheLine::cacheLine(){
 				if(!write_through){
 					if(_DEBUG) printf("Writing Back to the MEMZ \n");
 					int evict_data;
-					int evict_tag = sets[setIndex]->cachelines[lru]->tag;
+					int evict_tag = sets[setIndex]->cachelines[lru].tag;
 					int evict_address = (evict_tag << 7) + (setIndex << 2);
 					for(int evict_off = 0; evict_off < words_per_line; evict_off++){
 						evict_data = sets[setIndex]->streamOut(lru,evict_off);
@@ -322,7 +330,7 @@ cacheLine::cacheLine(){
 				loadBuffer(address, data);
 			}
 			else {
-				sets[setIndex]->cachelines[hit]->dirty = true;
+				sets[setIndex]->cachelines[hit].dirty = true;
 			}
 			return;
 		}
@@ -333,10 +341,10 @@ cacheLine::cacheLine(){
 			if(!sets[setIndex]->emptyLineAvailable()){
 				if(_DEBUG1) printf("Evicting... \n");
 				int lru = sets[setIndex]->evict_LRU();
-				if(!write_through && sets[setIndex]->cachelines[lru]->dirty){
+				if(!write_through && sets[setIndex]->cachelines[lru].dirty){
 					if(_DEBUG1) printf("Write Back: Writing to Memory \n");
 					int evict_data;
-					int evict_tag = sets[setIndex]->cachelines[lru]->tag;
+					int evict_tag = sets[setIndex]->cachelines[lru].tag;
 					int evict_address = (evict_tag << 7) + (setIndex << 2);
 					for(int evict_off = 0; evict_off < words_per_line; evict_off++){
 						evict_data = sets[setIndex]->streamOut(lru,evict_off);
@@ -349,7 +357,7 @@ cacheLine::cacheLine(){
 			if(_DEBUG1) printf("Reading in Memory Block \n");
 			int lineIndex;
 			for(int i=0; i < lines_per_set; i++){
-				if(sets[setIndex]->cachelines[i]->valid == false){
+				if(sets[setIndex]->cachelines[i].valid == false){
 					lineIndex = i;
 					break;
 				}

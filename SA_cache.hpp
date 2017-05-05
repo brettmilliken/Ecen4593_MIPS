@@ -6,6 +6,7 @@
 #include <string>
 #include <iostream>
 #include <queue>
+#include <vector>
 
 #ifndef SACACHE_HPP
 #define SACACHE_HPP
@@ -53,7 +54,8 @@ class cacheLine{
 
 class set{
 	public:
-	cacheLine* cachelines[lines_per_set];
+	cacheLine* cachelines;
+	//cacheLine* cachelines[lines_per_set];
 	set(int lines);
 	~set();
 	int importWord(int Tag, int setIndex, int offset);
