@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <queue>
 //#include "instructions.hpp" 
 #include "pc.hpp" 
 #include "Load_Program.hpp"
@@ -14,14 +15,18 @@
 
 
 using namespace std;
-
+cache_stats cachestatus = {0,0,0,0,0,0,0,0.0};
+//extern cache_stats cachestatus;
 // define global variables
 //instr instructions[1000]; // define instruction memory
 int sp = 29;
 int fp = 30;
 int iCount = 0;
 int cycle_count = 0;
+int imem[1200];
 extern memory main_memory;
+extern int indexBits;
+extern int offsetBits;
 pc PC; // define program counter
 //extern struct IF_ID ifid; // if/id stage register
 //extern struct IF_ID shadifid;
@@ -32,9 +37,9 @@ pc PC; // define program counter
 //extern struct MEM_WB memwb; // mem/wb stage register
 //extern struct MEM_WB shadmemwb;
 int gregisters[32];
-cache* icache = new cache(1,64);
-cache* dcache = new cache(2,32);
-
+//cache* icache = new cache(1,64);
+cache* dcache = new cache(2,num_of_sets);
+bool write_through = false;
 //int memory[1200];
 // end define global variables
 
@@ -49,9 +54,9 @@ int main(void)
 
 	  /* initialize state elements */
 
-	  PC.address = main_memory.read(5);
-	  gregisters[sp] = main_memory.read(0);
-	  gregisters[fp] = main_memory.read(1);
+	  PC.address = imem[5];//main_memory.read(5);
+	  gregisters[sp] = imem[0];//main_memory.read(0);
+	  gregisters[fp] = imem[1];//main_memory.read(1);
 	  cycle_count = 0;
 	  
 	  while (PC.address != 0x00000000){
@@ -82,14 +87,42 @@ int main(void)
 		  
 	  }
 	  //cout<< "PC Address post while: " << PC.address << "\n";
+	  	int evict_data;
+		int evict_tag;
+		int evict_address;
+		if(write_through){
+			while(!(dcache->buffer.empty())){
+				dcache->clk_buffer();
+			}
+		}
+		else {
+			for(int i = 0; i < num_of_sets ; i++){
+				for(int j = 0; j < lines_per_set; j++){
+					if(dcache->sets[i]->cachelines[j].dirty){
+						printf("Eviction: Write Back: Writing to Memory \n");
+						evict_tag = dcache->sets[i]->cachelines[j].tag;
+						evict_address = (evict_tag << (indexBits+offsetBits) ) + (i << words_per_line);
+						for(int evict_off = 0; evict_off < words_per_line; evict_off++){
+							evict_data = dcache->sets[i]->streamOut(j,evict_off);
+							main_memory.write(evict_address+evict_off, evict_data);
+							printf("Eviction: Memory Write \n Address - %d Data - %d \n",evict_address, evict_data);
+						}
+					}
+				}
+			}
+		}
 	  cout << "Desired: " << 112 << " " <<"Actual: " << main_memory.read(6) << "\n";
 	  cout << "Desired: " << 29355 << " " << "Actual: " << main_memory.read(7) << "\n";
 	  cout << "Desired: " << 14305 << " " << "Actual: " << main_memory.read(8) << "\n";
 	  cout << "Desired: " << 0 << " " << "Actual: " << main_memory.read(9) << "\n";
-	  /*	for(int k = 243; k<500; k++){
+	  	/*for(int k = 243; k<500; k++){
 			cout << std::dec <<"memory location: " << k << std::hex << " data: " << memory[k] << "\n";
 		}*/
-
+		int cpi = iCount/cycle_count;
+		cout << "instruction_count: " << iCount << "\n";
+		cout << "cycle count: " << cycle_count << "\n";
+		cout << "CPI: " << cpi << "\n";
+		printStatus();
 	  //cout << "instruction count end: " << iCount << "\n";
 	  //cout << "cycle count end: " << cycle_count << "\n";	 
 	  break; 

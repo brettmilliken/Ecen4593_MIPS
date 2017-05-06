@@ -3,9 +3,9 @@
 #include "main_memory.hpp"
 
 extern memory main_memory;
+extern int imem[];
 
 const int memory_size = 1200;
-
 
 unsigned int program_image[memory_size] = {
 	
@@ -53,46 +53,7 @@ unsigned int program_image[memory_size] = {
 	
 	
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	
 	// program 1
 	
@@ -880,6 +841,7 @@ unsigned int program_image[memory_size] = {
 void Initialize_Simulation_Memory(void){
 
 	for (int i=0; i < memory_size; i++){
+		imem[i] = program_image[i];
 		main_memory.write(i,program_image[i]);
 	}
 }

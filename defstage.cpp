@@ -17,9 +17,11 @@ int pcNext;
 int temp;
 int masktemp;
 bool forward;
+extern int imem[];
 extern cache* dcache;
-extern cache* icache;
+//extern cache* icache;
 extern struct pc PC;
+extern memory main_memory;
 int32_t signTemp;
 IF_ID ifid;
 IF_ID shadifid;
@@ -29,6 +31,7 @@ EX_MEM exmem;
 EX_MEM shadexmem;
 MEM_WB memwb;
 MEM_WB shadmemwb;
+int JR_Count = 0;
 
 void stall()
 {
@@ -127,7 +130,8 @@ int32_t signExtend(int offset)
 void IF()
 {
 	stallPipe = false;
-	shadifid.instruction = icache->read(PC.address,true,cycle_count); // store current instruction
+	//shadifid.instruction = icache->read(PC.address,true,cycle_count); // store current instruction
+	shadifid.instruction = imem[PC.address];
 	// increment pc value and store
 	shadifid.PCincremented = PC.address + 1;
 	pcNext = shadifid.PCincremented;
@@ -568,6 +572,7 @@ void MEM()
 				wordaddress = (exmem.ALUresult >> 2);
 				storetemp = gregisters[exmem.rt];
 				dcache->write(wordaddress,storetemp,cycle_count);
+				printf("Inserted Data: %d Returned Data %d \n",storetemp, dcache->read(wordaddress,true,cycle_count));
 				break;
 		}
 	}

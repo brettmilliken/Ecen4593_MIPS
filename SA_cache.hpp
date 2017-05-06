@@ -12,17 +12,23 @@
 #define SACACHE_HPP
 
 #define words_per_line 4
-#define num_of_sets 32
+#define num_of_sets 8
 #define lines_per_set 2
 #define I_num_of_sets 64
 #define I_lines_per_set 1
 #define address_size 32
-#define miss_penalty 40
+#define miss_penalty 12
+
+extern bool write_through;
+
+
 
 //Global Variables
 const int set_bit_size = log2(num_of_sets);
 //const int offset_size = log2(bytes_per_line);
 const int Tag_Size = address_size - set_bit_size;
+
+void printStatus();
 
 struct cache_stats{
 	int access_count;
@@ -33,7 +39,7 @@ struct cache_stats{
 	int write_hit;
 	int read_hit;
 	double hit_rate;	
-};// cachestatus = {0,0,0,0,0,0,0,0.0};
+};
 
 struct buffer_entry{
 	int32_t address;
@@ -82,9 +88,12 @@ class cache{
 	int early_start(int32_t address, int &cycle);
 	void writeFromBuffer();
 	void clk_buffer();
+	int set_number;
+	int line_number;
 	
 	private:
 	int getSetIndex(int32_t address);
 	int isHit(int tag, int setIndex);
 };
+
 #endif
