@@ -27,6 +27,7 @@ int imem[1200];
 extern memory main_memory;
 extern int indexBits;
 extern int offsetBits;
+extern cache_stats cachestatus;
 pc PC; // define program counter
 //extern struct IF_ID ifid; // if/id stage register
 //extern struct IF_ID shadifid;
@@ -37,7 +38,7 @@ pc PC; // define program counter
 //extern struct MEM_WB memwb; // mem/wb stage register
 //extern struct MEM_WB shadmemwb;
 int gregisters[32];
-//cache* icache = new cache(1,64);
+cache* icache = new cache(2,num_of_sets);
 cache* dcache = new cache(2,num_of_sets);
 bool write_through = false;
 //int memory[1200];
@@ -53,7 +54,7 @@ int main(void)
   while (1) {
 
 	  /* initialize state elements */
-
+	  dcache->clk_buffer();
 	  PC.address = imem[5];//main_memory.read(5);
 	  gregisters[sp] = imem[0];//main_memory.read(0);
 	  gregisters[fp] = imem[1];//main_memory.read(1);
@@ -96,7 +97,7 @@ int main(void)
 			}
 		}
 		else {
-			printf("Flushing Cache \n");
+			//printf("Flushing Cache \n");
 			for(int i = 0; i < num_of_sets ; i++){
 				for(int j = 0; j < lines_per_set; j++){
 					if(dcache->sets[i]->cachelines[j].dirty){
@@ -131,6 +132,7 @@ int main(void)
   }
 }
   
+
 
 
 		  //if (Total_Instructions > 0) icache_hit_rate = (Total_Instructions - icache_misses) / Total_Instructions;

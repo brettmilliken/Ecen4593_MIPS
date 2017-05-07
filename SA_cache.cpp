@@ -11,8 +11,8 @@ bool _DEBUG2 = false;
 bool _DEBUG3 = false;
 bool _DEBUGADDRESS = false;
 bool _EVICT = false;
-bool stats = false; // toggles basic statistics for print status
-bool wordstats = false; // toggles word import stats
+bool stats = true; // toggles basic statistics for print status
+bool wordstats = true; // toggles word import stats
 bool hitstats = false; // toggles hit statistic printing
 bool fillprint = false; // toggles cache fill complete print
 bool taginfo = false; // toggles tag information on tag access
@@ -125,7 +125,7 @@ cacheLine::cacheLine(){
 	//Inputs new data into a cacheline that is available or evicts the least
 	//recently used in orderto place new cache entry
 	void set::streamIn(int index,int tag, int offset, int newData, bool validity){
-		if(_DEBUG3) printf("Stream IN-lineIndex: %d Tag: %d Offset: %d Data: %d \n",index,tag, offset, newData);
+		//printf("Stream IN-lineIndex: %d Tag: %d Offset: %d Data: %d \n",index,tag, offset, newData);
 		cachelines[index].data[offset] = newData;
 		cachelines[index].tag = tag;
 		if(validity){
@@ -218,22 +218,22 @@ cacheLine::cacheLine(){
 			default: extracted_bits = 0; break;
 		}
 		if(_DEBUGADDRESS) printf("SET BLOCK: %d BITS: %d \n",extracted_bits,block_size);
-		uint temp = extracted_bits >> offsetBits;
-		printf("Extracted INDEX: %d",temp);
+		//uint temp = extracted_bits >> offsetBits;
+		//printf("Extracted INDEX: %d",temp);
 		return (extracted_bits >> offsetBits);
 	}
 	
 	int cache::isHit(int tag, int setIndex){
 		for(int i = 0; i < lines_per_set;i++){
 			if(sets[setIndex]->cachelines[i].tag == tag){
-				if(hitstats) printf("IS HIT: TAGS ARE THE SAME - Line: %d \n",i);
+				//if(hitstats) printf("IS HIT: TAGS ARE THE SAME - Line: %d \n",i);
 				if(sets[setIndex]->cachelines[i].valid){
-					if(hitstats) printf("IS HIT: VALID - Returning line: %d \n",i);
+					//if(hitstats) printf("IS HIT: VALID - Returning line: %d \n",i);
 					return i;
 				}
 			}
 		}
-		printf("NO HITS \n");
+		//printf("NO HITS \n");
 		return -1;
 	}
 	
@@ -254,8 +254,8 @@ cacheLine::cacheLine(){
 		int hit = isHit(tag, setIndex);
 		if(taginfo) printf("Tag: %d Set Index: %d Offset: %d Hit: %d \n",tag,setIndex,offset, hit);
 		if(hit >= 0){	
-			if(_DEBUG) printf("Read: Hit \n");
-			printf("Offset: %d",offset);
+			//if(_DEBUG) printf("Read: Hit \n");
+			//printf("Offset: %d",offset);
 			if(doesCount) cachestatus.read_hit++;
 			return sets[setIndex]->streamOut(hit, offset);
 		}
@@ -272,7 +272,7 @@ cacheLine::cacheLine(){
 					int evict_tag = sets[setIndex]->cachelines[lru].tag;
 					if(_DEBUG) printf("evict tag: %d setIndex %d \n",evict_tag, setIndex);
 					int evict_address = ((evict_tag << (indexBits + offsetBits)) + (setIndex << offsetBits));
-					printf("newly configured address: %d",evict_address);
+					//printf("newly configured address: %d",evict_address);
 					for(int evict_off = 0; evict_off < words_per_line; evict_off++){
 						evict_data = sets[setIndex]->streamOut(lru,evict_off);
 						main_memory.write(evict_address+evict_off, evict_data);
@@ -399,7 +399,7 @@ cacheLine::cacheLine(){
 			if(!sets[setIndex]->emptyLineAvailable()){
 				if(_EVICT) printf("Evicting... \n");
 				int lru = sets[setIndex]->evict_LRU();
-				if(sets[setIndex]->cachelines[lru].dirty){
+				if(!write_through && sets[setIndex]->cachelines[lru].dirty){
 					if(_EVICT) printf("Eviction: Write Back: Writing to Memory \n");
 					int evict_data;
 					int evict_tag = sets[setIndex]->cachelines[lru].tag;
@@ -471,53 +471,4 @@ cacheLine::cacheLine(){
 		main_memory.write(temp.address, temp.data);
 		main_memory.counter = miss_penalty;
 	}
-	
-/*
 
-int main(){
-	int clk = 0;
-	int d;
-	for(int a = 551; a<650; a++){
-		d = rand();
-		main_memory.write(a, d);
-	}
-	printf("Reading From Memory \n");
-	for(int i = 551; i<650; i++){
-		d = main_memory.read(i);
-		cout << "ADDRESS:" << i << " DATA: " << d << endl;
-	}
-	
-	
-	cache* icache = new cache(lines_per_set,num_of_sets);
-		main_memory.counter = 0;
-		int data = 0;
-	//	int cache_read;
-	
-		printf("BEGINNING READ TEST \n");
-		for(int i = 560; i < 580; i+=2){
-				printf("READING: Address-%d \n",i);
-				data = icache->read(i,true,clk);
-				printf("DATA: %d \n",data);
-			}
-			
-					printf("\n FINAL CLOCK: %d \n",clk); 
-
-			
-		printf("BEGINNING WRITE TEST \n");
-		for(int i = 580; i < 600; i+=2){
-			data = rand() % 100;
-			printf("WRITING: Address-%d DATA-%d \n",i,data);
-			icache->write(i,data);
-			data = icache->read(i,true, clk);
-			icache->clk_buffer();
-			printf("READ DATA: %d \n",data);
-			clk++;
-		}
-		printf("FINAL CLOCK: %d \n",clk); 
-		
-		//cache* icache = new cache(I_lines_per_set,num_of_sets);
-	
-	
-	return 1;
-}
-*/

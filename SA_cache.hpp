@@ -13,9 +13,9 @@
 
 #define words_per_line 4
 #define num_of_sets 8
+
 #define lines_per_set 2
-#define I_num_of_sets 64
-#define I_lines_per_set 1
+
 #define address_size 32
 #define miss_penalty 12
 
@@ -95,5 +95,6 @@ class cache{
 	int getSetIndex(int32_t address);
 	int isHit(int tag, int setIndex);
 };
+
 
 #endif

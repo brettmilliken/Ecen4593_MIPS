@@ -19,7 +19,7 @@ int masktemp;
 bool forward;
 extern int imem[];
 extern cache* dcache;
-//extern cache* icache;
+extern cache* icache;
 extern struct pc PC;
 extern memory main_memory;
 int32_t signTemp;
