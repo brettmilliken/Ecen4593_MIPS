@@ -96,18 +96,20 @@ int main(void)
 			}
 		}
 		else {
+			printf("Flushing Cache \n");
 			for(int i = 0; i < num_of_sets ; i++){
 				for(int j = 0; j < lines_per_set; j++){
 					if(dcache->sets[i]->cachelines[j].dirty){
-						printf("Eviction: Write Back: Writing to Memory \n");
 						evict_tag = dcache->sets[i]->cachelines[j].tag;
-						evict_address = (evict_tag << (indexBits+offsetBits) ) + (i << words_per_line);
+						evict_address = ((evict_tag << (indexBits+offsetBits)) + (i << offsetBits));
+						printf("Evict Address: %d Evict Tag: %d I: %d J: %d",evict_address, evict_tag,i,j);
 						for(int evict_off = 0; evict_off < words_per_line; evict_off++){
 							evict_data = dcache->sets[i]->streamOut(j,evict_off);
 							main_memory.write(evict_address+evict_off, evict_data);
-							printf("Eviction: Memory Write \n Address - %d Data - %d \n",evict_address, evict_data);
+							printf("Eviction: Memory Write \n Address - %d Data - %d \n",evict_address+evict_off, evict_data);
 						}
 					}
+					printf("Not Dirty Bit \n");
 				}
 			}
 		}
@@ -118,7 +120,7 @@ int main(void)
 	  	/*for(int k = 243; k<500; k++){
 			cout << std::dec <<"memory location: " << k << std::hex << " data: " << memory[k] << "\n";
 		}*/
-		int cpi = iCount/cycle_count;
+		double cpi = iCount/cycle_count;
 		cout << "instruction_count: " << iCount << "\n";
 		cout << "cycle count: " << cycle_count << "\n";
 		cout << "CPI: " << cpi << "\n";

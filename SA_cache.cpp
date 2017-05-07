@@ -1,16 +1,16 @@
 #include "SA_cache.hpp"
 #include "main_memory.hpp"
 using namespace std;
-
+//NEw
 //#define miss_penalty 14
 
 memory main_memory;
-bool _DEBUG = true;
+bool _DEBUG = false;
 bool _DEBUG1 = false;
 bool _DEBUG2 = false;
 bool _DEBUG3 = false;
-bool _DEBUGADDRESS = true;
-bool _EVICT = true;
+bool _DEBUGADDRESS = false;
+bool _EVICT = false;
 bool stats = false; // toggles basic statistics for print status
 bool wordstats = false; // toggles word import stats
 bool hitstats = false; // toggles hit statistic printing
@@ -55,18 +55,18 @@ cacheLine::cacheLine(){
 	
 	int getTag(int32_t address){
 		switch (offsetBits+indexBits){
-			case 0 : return address;
-			case 1 : return (address & ~0x00000001) >> (offsetBits+indexBits);
-			case 2 : return (address & ~0x00000003) >> (offsetBits+indexBits);
-			case 3 : return (address & ~0x00000007) >> (offsetBits+indexBits);
-			case 4 : return (address & ~0x0000000F) >> (offsetBits+indexBits);
-			case 5 : return (address & ~0x0000001F) >> (offsetBits+indexBits);
-			case 6 : return (address & ~0x0000003F) >> (offsetBits+indexBits);
-			case 7 : return (address & ~0x0000007F) >> (offsetBits+indexBits);
-			case 8 : return (address & ~0x000000FF) >> (offsetBits+indexBits);
-			case 9 : return (address & ~0x000001FF) >> (offsetBits+indexBits);
-			case 10 : return (address & ~0x000003FF) >> (offsetBits+indexBits);
-			default: return address;	
+			case 0 : return address; break;
+			case 1 : return (address & ~0x00000001) >> (offsetBits+indexBits); break;
+			case 2 : return (address & ~0x00000003) >> (offsetBits+indexBits); break;
+			case 3 : return (address & ~0x00000007) >> (offsetBits+indexBits); break;
+			case 4 : return (address & ~0x0000000F) >> (offsetBits+indexBits); break;
+			case 5 : return (address & ~0x0000001F) >> (offsetBits+indexBits); break;
+			case 6 : return (address & ~0x0000003F) >> (offsetBits+indexBits); break;
+			case 7 : return (address & ~0x0000007F) >> (offsetBits+indexBits); break;
+			case 8 : return (address & ~0x000000FF) >> (offsetBits+indexBits); break;
+			case 9 : return (address & ~0x000001FF) >> (offsetBits+indexBits); break;
+			case 10 : return (address & ~0x000003FF) >> (offsetBits+indexBits); break;
+			default: return address; break;
 		}
 	}
 	
@@ -202,20 +202,25 @@ cacheLine::cacheLine(){
 	}
 	
 	int cache::getSetIndex(int32_t address){
-		int extracted_bits =0;
-		switch(indexBits+offsetBits){
-			case 0 :  extracted_bits = (address & ~0x00000007); 
-			case 1 :  extracted_bits = (address & ~0x0000000F);
-			case 2 :  extracted_bits = (address & ~0x0000001F);
-			case 3 :  extracted_bits = (address & ~0x0000003F);
-			case 4 :  extracted_bits = (address & ~0x0000007F);
-			case 5 :  extracted_bits = (address & ~0x000000FF);
-			case 6 :  extracted_bits = (address & ~0x000001FF);
-			case 7 :  extracted_bits = (address & ~0x000007FF);
-			case 8 :  extracted_bits = (address & ~0x00000FFF);
-			case 9 :  extracted_bits = (address & ~0x00001FFF);
+		int extracted_bits = 0;
+		int block_size = offsetBits+indexBits;
+		switch(block_size){
+			case 0 :  extracted_bits = 0; break;
+			case 1 :  extracted_bits = (address & 0x00000001); break; 
+			case 2 :  extracted_bits = (address & 0x00000003); break;
+			case 3 :  extracted_bits = (address & 0x00000007); break;
+			case 4 :  extracted_bits = (address & 0x0000000F); break;
+			case 5 :  extracted_bits = (address & 0x0000001F); break;
+			case 6 :  extracted_bits = (address & 0x0000003F); break;
+			case 7 :  extracted_bits = (address & 0x0000007F); break;
+			case 8 :  extracted_bits = (address & 0x0000001F); break;
+			case 9 :  extracted_bits = (address & 0x000001FF); break;
+			default: extracted_bits = 0; break;
 		}
-		return extracted_bits >> offsetBits;
+		if(_DEBUGADDRESS) printf("SET BLOCK: %d BITS: %d \n",extracted_bits,block_size);
+		uint temp = extracted_bits >> offsetBits;
+		printf("Extracted INDEX: %d",temp);
+		return (extracted_bits >> offsetBits);
 	}
 	
 	int cache::isHit(int tag, int setIndex){
@@ -239,7 +244,12 @@ cacheLine::cacheLine(){
 		int tag = getTag(address);
 		int data[words_per_line];
 		int net_cycle = 0;
-		
+		if(_DEBUGADDRESS) {
+			printf("ADDRESS: %d \n",address);
+			printf("TAG: %d ",tag);
+			printf("SET INDEX: %d ", setIndex);
+			printf("OFFSET: %d \n", offset);
+		}
 		if(doesCount) cachestatus.read_count++;
 		int hit = isHit(tag, setIndex);
 		if(taginfo) printf("Tag: %d Set Index: %d Offset: %d Hit: %d \n",tag,setIndex,offset, hit);
@@ -261,7 +271,7 @@ cacheLine::cacheLine(){
 					int evict_data;
 					int evict_tag = sets[setIndex]->cachelines[lru].tag;
 					if(_DEBUG) printf("evict tag: %d setIndex %d \n",evict_tag, setIndex);
-					int evict_address = (evict_tag << 7) + (setIndex << 2);
+					int evict_address = ((evict_tag << (indexBits + offsetBits)) + (setIndex << offsetBits));
 					printf("newly configured address: %d",evict_address);
 					for(int evict_off = 0; evict_off < words_per_line; evict_off++){
 						evict_data = sets[setIndex]->streamOut(lru,evict_off);
@@ -287,7 +297,7 @@ cacheLine::cacheLine(){
 					net_cycle++;
 				}
 			}
-			if(_DEBUG) printf("NET CYCLE: %d", net_cycle);
+			if(_DEBUG) printf("NET CYCLE: %d \n", net_cycle);
 			clk_cycle += (net_cycle + offset);
 			if(fillprint) printf("CACHE-FILL COMPLETE \n");
 			return data[offset];
@@ -358,20 +368,22 @@ cacheLine::cacheLine(){
 	void cache::write(int32_t address, int data, int &clk_cycle){
 		if(_DEBUG1 | _EVICT) printf("WRITE!! \n \n");
 		int tag = getTag(address);
-		if(_DEBUGADDRESS) {
-			printf("ADDRESS: %d\n",address);
-			printf("TAG: %d\n",tag);
-		}
 		int setIndex = getSetIndex(address);
-		printf("SET INDEX: %d\n ", setIndex);
 		int offset = getOffset(address);
 		int block = address-offset;
+		if(_DEBUGADDRESS) {
+			printf("ADDRESS: %d \n",address);
+			printf("TAG: %d ",tag);
+			printf("SET INDEX: %d ", setIndex);
+			printf("OFFSET: %d \n", offset);
+			
+		}
 		cachestatus.write_count++;
 		int hit = isHit(tag, setIndex);
 		if(hit >= 0){
 			if(_DEBUG1) printf("Write: HIT! \n");
-			cachestatus.write_hit++  ;
-			sets[setIndex]->streamIn(hit,tag,offset,data,true);
+				cachestatus.write_hit++  ;
+				sets[setIndex]->streamIn(hit,tag,offset,data,true);
 			if(write_through){			
 				loadBuffer(address, data);
 			}
@@ -387,11 +399,11 @@ cacheLine::cacheLine(){
 			if(!sets[setIndex]->emptyLineAvailable()){
 				if(_EVICT) printf("Evicting... \n");
 				int lru = sets[setIndex]->evict_LRU();
-				if(!write_through && sets[setIndex]->cachelines[lru].dirty){
+				if(sets[setIndex]->cachelines[lru].dirty){
 					if(_EVICT) printf("Eviction: Write Back: Writing to Memory \n");
 					int evict_data;
 					int evict_tag = sets[setIndex]->cachelines[lru].tag;
-					int evict_address = (evict_tag << 7) + (setIndex << 2);
+					int evict_address = ((evict_tag << (indexBits + offsetBits)) + (setIndex << offsetBits));
 					for(int evict_off = 0; evict_off < words_per_line; evict_off++){
 						evict_data = sets[setIndex]->streamOut(lru,evict_off);
 						main_memory.write(evict_address+evict_off, evict_data);
@@ -416,8 +428,13 @@ cacheLine::cacheLine(){
 			newData = main_memory.read(block+words_per_line);
 			sets[setIndex]->streamIn(lineIndex, tag, words_per_line-1,newData,true);
 			sets[setIndex]->streamIn(lineIndex, tag, offset,data,true); 
+			if(!write_through){
+				sets[setIndex]->cachelines[lineIndex].dirty = true;
+			}
+			else{
+				loadBuffer(address,data);
+			}
 			if(_DEBUG2) printf("WRITE OUTPUT: NEW DATA: %d ADDRESS: %d \n",newData, address);
-			loadBuffer(address,data);
 			clk_cycle += ((8+(2*words_per_line) + main_memory.counter));
 			return;
 		}
